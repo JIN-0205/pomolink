@@ -1,0 +1,202 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Clerkと連携するユーザーモデル
+model User {
+  id        String   @id @default(cuid())
+  clerkId   String   @unique
+  email     String   @unique
+  name      String?
+  imageUrl  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // 通知設定
+  emailNotifications Boolean @default(true)
+
+  // ユーザーが作成したルーム（プランナーとして）
+  createdRooms Room[] @relation("RoomCreator")
+
+  // ユーザーが参加しているルーム
+  participantRooms RoomParticipant[]
+
+  // ユーザーに送られた招待
+  receivedInvitations Invitation[] @relation("InvitationReceiver")
+
+  // ユーザーが送った招待
+  sentInvitations Invitation[] @relation("InvitationSender")
+
+  // サブスクリプション情報
+  subscription Subscription?
+}
+
+// ルームモデル
+model Room {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  inviteCode  String   @unique
+  isPrivate   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // ルーム作成者 (プランナー)
+  creatorId String
+  creator   User   @relation("RoomCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+
+  // ルーム参加者
+  participants RoomParticipant[]
+
+  // ルーム内のタスク
+  tasks Task[]
+
+  // ルームへの招待
+  invitations Invitation[]
+}
+
+// ルーム参加者の中間テーブル
+model RoomParticipant {
+  id       String   @id @default(cuid())
+  role     UserRole // PLANNER or PERFORMER
+  joinedAt DateTime @default(now())
+
+  // 関連するユーザーとルーム
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  roomId String
+  room   Room   @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roomId])
+}
+
+// ユーザーロール
+enum UserRole {
+  PLANNER
+  PERFORMER
+}
+
+// 招待モデル
+model Invitation {
+  id        String           @id @default(cuid())
+  createdAt DateTime         @default(now())
+  expiresAt DateTime?
+  status    InvitationStatus @default(PENDING)
+  role      UserRole         @default(PERFORMER)
+
+  // 招待元ルーム
+  roomId String
+  room   Room   @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  // 招待を送ったユーザー
+  senderId String
+  sender   User   @relation("InvitationSender", fields: [senderId], references: [id], onDelete: Cascade)
+
+  // 招待されたユーザー (メールアドレスのみの場合はnull)
+  receiverId String?
+  receiver   User?   @relation("InvitationReceiver", fields: [receiverId], references: [id])
+
+  // メールアドレスのみでの招待の場合
+  email String?
+
+  // 招待方法
+  method InvitationMethod
+}
+
+// 招待のステータス
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
+// 招待方法
+enum InvitationMethod {
+  LINK
+  EMAIL
+}
+
+// タスクモデル
+model Task {
+  id             String     @id @default(cuid())
+  title          String
+  description    String?
+  status         TaskStatus @default(TODO)
+  priority       Priority   @default(MEDIUM)
+  estimatedPomos Int? // 予想ポモドーロ数
+  completedPomos Int        @default(0) // 完了したポモドーロ数
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  dueDate        DateTime?
+
+  // タスクが所属するルーム
+  roomId String
+  room   Room   @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  // ポモドーロセッション
+  sessions PomoSession[]
+}
+
+// タスクの優先度
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+// タスクのステータス
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  COMPLETED
+}
+
+// シンプルなポモドーロセッションモデル
+model PomoSession {
+  id        String    @id @default(cuid())
+  startTime DateTime
+  endTime   DateTime?
+  completed Boolean   @default(false)
+  notes     String?
+  createdAt DateTime  @default(now())
+
+  // セッションを記録したユーザー (RoomParticipant経由で取得可能なので直接関連付けはなし)
+
+  // 関連するタスク
+  taskId String
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+// サブスクリプションモデル (Stripe連携用)
+model Subscription {
+  id                     String    @id @default(cuid())
+  userId                 String    @unique
+  user                   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stripeCustomerId       String?   @unique
+  stripeSubscriptionId   String?   @unique
+  stripePriceId          String?
+  stripeCurrentPeriodEnd DateTime?
+  planType               PlanType  @default(FREE)
+  maxRoomMembers         Int       @default(3) // 無料プランのデフォルト制限
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+}
+
+enum PlanType {
+  FREE
+  PRO
+  TEAM
+}
