@@ -69,6 +69,60 @@ export async function POST(req: NextRequest) {
 }
 
 // ルーム一覧取得API
+// export async function GET() {
+//   try {
+//     const { userId } = await auth();
+//     if (!userId) {
+//       return new NextResponse("認証が必要です", { status: 401 });
+//     }
+
+//     const user = await prisma.user.findUnique({
+//       where: { clerkId: userId },
+//     });
+
+//     if (!user) {
+//       return new NextResponse("ユーザーが見つかりません", { status: 404 });
+//     }
+
+//     // ユーザーが参加しているルームを取得
+//     const participants = await prisma.roomParticipant.findMany({
+//       where: { userId: user.id },
+//       include: {
+//         room: {
+//           include: {
+//             creator: {
+//               select: {
+//                 id: true,
+//                 name: true,
+//                 imageUrl: true,
+//               },
+//             },
+//             participants: {
+//               include: {
+//                 user: {
+//                   select: {
+//                     id: true,
+//                     name: true,
+//                     imageUrl: true,
+//                   },
+//                 },
+//               },
+//             },
+//           },
+//         },
+//       },
+//     });
+
+//     const rooms = participants.map((p) => p.room);
+
+//     return NextResponse.json(rooms);
+//   } catch (error) {
+//     console.error("[ROOMS_GET]", error);
+//     return new NextResponse("内部エラー", { status: 500 });
+//   }
+// }
+
+// src/app/api/rooms/route.ts の修正
 export async function GET() {
   try {
     const { userId } = await auth();
@@ -90,6 +144,7 @@ export async function GET() {
       include: {
         room: {
           include: {
+            participants: true,
             creator: {
               select: {
                 id: true,
@@ -97,25 +152,28 @@ export async function GET() {
                 imageUrl: true,
               },
             },
-            participants: {
-              include: {
-                user: {
-                  select: {
-                    id: true,
-                    name: true,
-                    imageUrl: true,
-                  },
-                },
-              },
-            },
           },
         },
       },
     });
 
-    const rooms = participants.map((p) => p.room);
+    // フロントエンドの期待する形式に整形
+    const formattedRooms = participants.map((p) => ({
+      room: {
+        id: p.room.id,
+        name: p.room.name,
+        description: p.room.description,
+        inviteCode: p.room.inviteCode,
+        isPrivate: p.room.isPrivate,
+        createdAt: p.room.createdAt.toISOString(),
+        updatedAt: p.room.updatedAt.toISOString(),
+        creatorId: p.room.creatorId,
+      },
+      participantCount: p.room.participants.length,
+      role: p.role, // 参加者自身のロール
+    }));
 
-    return NextResponse.json(rooms);
+    return NextResponse.json(formattedRooms);
   } catch (error) {
     console.error("[ROOMS_GET]", error);
     return new NextResponse("内部エラー", { status: 500 });

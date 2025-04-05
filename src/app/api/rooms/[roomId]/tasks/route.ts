@@ -10,6 +10,7 @@ export async function POST(
   { params }: { params: { roomId: string } }
 ) {
   try {
+    const { roomId } = await params;
     const { userId } = await auth();
     if (!userId) {
       return new NextResponse("認証が必要です", { status: 401 });
@@ -32,7 +33,7 @@ export async function POST(
 
     // ルームを取得
     const room = await prisma.room.findUnique({
-      where: { id: params.roomId },
+      where: { id: roomId },
       include: {
         participants: true,
       },
@@ -81,6 +82,7 @@ export async function GET(
   { params }: { params: { roomId: string } }
 ) {
   try {
+    const { roomId } = await params;
     const { userId } = await auth();
     if (!userId) {
       return new NextResponse("認証が必要です", { status: 401 });
@@ -96,7 +98,7 @@ export async function GET(
 
     // ルームを取得
     const room = await prisma.room.findUnique({
-      where: { id: params.roomId },
+      where: { id: roomId },
       include: {
         participants: true,
       },
@@ -121,7 +123,7 @@ export async function GET(
     // タスク一覧を取得
     const tasks = await db.task.findMany({
       where: {
-        roomId: params.roomId,
+        roomId: roomId,
         ...(status ? { status: status as TaskStatus } : {}),
         ...(priority ? { priority: priority as Priority } : {}),
       },
