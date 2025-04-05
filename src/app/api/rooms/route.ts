@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 招待コードを生成
-    const inviteCode = generateInviteCode();
+    const inviteCode = await generateInviteCode();
 
     // ルームを作成
     const room = await prisma.room.create({
