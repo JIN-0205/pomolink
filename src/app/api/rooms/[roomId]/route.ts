@@ -10,6 +10,7 @@ export async function GET(
 ) {
   try {
     const { userId } = await auth();
+    const { roomId } = await params;
     if (!userId) {
       return new NextResponse("認証が必要です", { status: 401 });
     }
@@ -24,7 +25,7 @@ export async function GET(
 
     // ルームを取得
     const room = await prisma.room.findUnique({
-      where: { id: params.roomId },
+      where: { id: roomId },
       include: {
         creator: {
           select: {
@@ -75,6 +76,7 @@ export async function PATCH(
 ) {
   try {
     const { userId } = await auth();
+    const { roomId } = await params;
     if (!userId) {
       return new NextResponse("認証が必要です", { status: 401 });
     }
@@ -91,7 +93,7 @@ export async function PATCH(
 
     // ルームを取得
     const room = await prisma.room.findUnique({
-      where: { id: params.roomId },
+      where: { id: roomId },
       include: {
         participants: true,
       },
@@ -112,7 +114,7 @@ export async function PATCH(
 
     // ルームを更新
     const updatedRoom = await prisma.room.update({
-      where: { id: params.roomId },
+      where: { id: roomId },
       data: {
         name: name !== undefined ? name : undefined,
         description: description !== undefined ? description : undefined,
@@ -134,6 +136,7 @@ export async function DELETE(
 ) {
   try {
     const { userId } = await auth();
+    const { roomId } = await params;
     if (!userId) {
       return new NextResponse("認証が必要です", { status: 401 });
     }
@@ -148,7 +151,7 @@ export async function DELETE(
 
     // ルームを取得
     const room = await prisma.room.findUnique({
-      where: { id: params.roomId },
+      where: { id: roomId },
     });
 
     if (!room) {
@@ -162,7 +165,7 @@ export async function DELETE(
 
     // ルームを削除
     await prisma.room.delete({
-      where: { id: params.roomId },
+      where: { id: roomId },
     });
 
     return new NextResponse(null, { status: 204 });

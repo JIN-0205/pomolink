@@ -1,9 +1,16 @@
+import { RoomList } from "@/components/rooms/RoomList";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "ルーム一覧 | PomoShare",
+  description: "参加中のルーム一覧",
+};
+
 export default function RoomsPage() {
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold">ルーム一覧</h1>
-      <p>ルームの一覧を表示します。</p>
-      {/* ルームの一覧 */}
+    <div className="container py-6">
+      <h1 className="mb-6 text-3xl font-bold">ルーム</h1>
+      <RoomList />
     </div>
   );
 }
