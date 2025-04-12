@@ -148,6 +148,9 @@ model Task {
 
   // ポモドーロセッション
   sessions PomoSession[]
+
+  // タスクに関連する録画
+  recordings Recording[]
 }
 
 // タスクの優先度
@@ -178,6 +181,25 @@ model PomoSession {
   // 関連するタスク
   taskId String
   task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  // セッションに関連する録画
+  recording Recording?
+}
+
+// 録画データモデル（新規追加）
+model Recording {
+  id        String   @id @default(cuid())
+  videoUrl  String // Firebase Storage内のURL
+  duration  Int // 動画の長さ（秒）
+  createdAt DateTime @default(now())
+
+  // 関連するタスク
+  taskId String
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  // 関連するセッション
+  sessionId String      @unique
+  session   PomoSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 }
 
 // サブスクリプションモデル (Stripe連携用)
