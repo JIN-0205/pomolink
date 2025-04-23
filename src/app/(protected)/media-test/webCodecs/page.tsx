@@ -54,8 +54,11 @@ export default function Mp4MuxerPage() {
     uploadTime: { min: 0, max: 0, unit: "秒" },
   });
 
+  // MP4 Blob state
+  const [mp4Blob, setMp4Blob] = useState<Blob | null>(null);
+
   // 録画の開始/停止を切り替え
-  const toggleRecording = useCallback(() => {
+  const toggleRecording = () => {
     if (isRecording) {
       stopRecording();
     } else {
@@ -63,7 +66,7 @@ export default function Mp4MuxerPage() {
       resetStatus(); // エンコードステータスもリセット
       startRecording();
     }
-  }, [isRecording, stopRecording, clearFrames, resetStatus, startRecording]);
+  };
 
   // 録画中の場合、videoRefの要素を使ってフレームキャプチャを行う
   useEffect(() => {
@@ -136,8 +139,8 @@ export default function Mp4MuxerPage() {
     }
   }, [frames.length, encodingSettings, estimateEncodingTime]);
 
-  // WebCodecs API でエンコード + Firebase にアップロード
-  const handleEncodeAndUpload = useCallback(async () => {
+  // WebCodecs API でエンコード
+  const handleEncode = useCallback(async () => {
     try {
       if (frames.length === 0) {
         alert("フレームがありません。録画してから再試行してください。");
@@ -146,7 +149,7 @@ export default function Mp4MuxerPage() {
 
       // ビデオエンコード
       const startEncodeTime = performance.now();
-      const mp4Blob = await encodeFrames(frames, {
+      const blob = await encodeFrames(frames, {
         width: frames[0].width,
         height: frames[0].height,
         fps: encodingSettings.fps,
@@ -158,25 +161,28 @@ export default function Mp4MuxerPage() {
       console.log(
         `実際のエンコード時間: ${((endEncodeTime - startEncodeTime) / 1000).toFixed(1)}秒`
       );
+      setMp4Blob(blob);
+    } catch (error: unknown) {
+      console.error("処理中にエラーが発生:", error);
+    }
+  }, [frames, encodeFrames, encodingSettings]);
 
-      // Firebaseにアップロード
-      const startUploadTime = performance.now();
+  // アップロードのみ実行
+  const handleUpload = useCallback(async () => {
+    if (!mp4Blob) {
+      alert("動画がエンコードされていません。");
+      return;
+    }
+    try {
       const downloadUrl = await uploadVideo(
         mp4Blob,
         `timelapse/video-${Date.now()}.mp4`
       );
-      const endUploadTime = performance.now();
-      console.log(
-        `実際のアップロード時間: ${((endUploadTime - startUploadTime) / 1000).toFixed(1)}秒`
-      );
-      console.log(
-        `合計処理時間: ${((endUploadTime - startEncodeTime) / 1000).toFixed(1)}秒`
-      );
       console.log("ビデオアップロード完了:", downloadUrl);
-    } catch (error: unknown) {
-      console.error("処理中にエラーが発生:", error);
+    } catch (error) {
+      console.error("アップロード中にエラー:", error);
     }
-  }, [frames, encodeFrames, uploadVideo, encodingSettings]);
+  }, [mp4Blob, uploadVideo]);
 
   // エンコード設定を変更
   const handleSettingChange = (
@@ -307,21 +313,34 @@ export default function Mp4MuxerPage() {
             エンコードとアップロード
           </h3>
 
-          <button
-            onClick={handleEncodeAndUpload}
-            disabled={encodingStatus.isEncoding || uploadStatus.isUploading}
-            className={`px-4 py-2 rounded-md ${
-              encodingStatus.isEncoding || uploadStatus.isUploading
-                ? "bg-gray-400 cursor-not-allowed"
-                : "bg-green-500 hover:bg-green-600"
-            } text-white mb-4`}
-          >
-            {encodingStatus.isEncoding
-              ? `エンコード中... ${encodingStatus.progress}%`
-              : uploadStatus.isUploading
+          <div className="flex gap-2 mb-4">
+            <button
+              onClick={handleEncode}
+              disabled={encodingStatus.isEncoding}
+              className={`px-4 py-2 rounded-md ${
+                encodingStatus.isEncoding
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-blue-500 hover:bg-blue-600"
+              } text-white`}
+            >
+              {encodingStatus.isEncoding
+                ? `エンコード中... ${encodingStatus.progress}%`
+                : "エンコード"}
+            </button>
+            <button
+              onClick={handleUpload}
+              disabled={!mp4Blob || uploadStatus.isUploading}
+              className={`px-4 py-2 rounded-md ${
+                !mp4Blob || uploadStatus.isUploading
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-green-500 hover:bg-green-600"
+              } text-white`}
+            >
+              {uploadStatus.isUploading
                 ? `アップロード中... ${uploadStatus.progress}%`
-                : "エンコード & アップロード"}
-          </button>
+                : "アップロード"}
+            </button>
+          </div>
 
           {(encodingStatus.error || uploadStatus.error) && (
             <p className="text-red-500 mt-2">
@@ -338,6 +357,7 @@ export default function Mp4MuxerPage() {
             </div>
           )}
 
+          <div>{videoUrl}</div>
           {videoUrl && (
             <div className="mt-4">
               <h4 className="font-medium mb-2">プレビュー:</h4>

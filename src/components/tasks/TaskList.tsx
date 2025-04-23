@@ -235,6 +235,11 @@ export function TaskList({ roomId, isPlanner }: TaskListProps) {
                       roomId={roomId}
                       onStatusChange={handleStatusChange}
                       isPlanner={isPlanner}
+                      onStartPomodoro={() =>
+                        router.push(
+                          `/rooms/${roomId}/pomodoro?taskId=${task.id}`
+                        )
+                      }
                     />
                   ))}
                 </CardContent>
@@ -255,6 +260,11 @@ export function TaskList({ roomId, isPlanner }: TaskListProps) {
                       roomId={roomId}
                       onStatusChange={handleStatusChange}
                       isPlanner={isPlanner}
+                      onStartPomodoro={() =>
+                        router.push(
+                          `/rooms/${roomId}/pomodoro?taskId=${task.id}`
+                        )
+                      }
                     />
                   ))}
                 </CardContent>
@@ -275,6 +285,11 @@ export function TaskList({ roomId, isPlanner }: TaskListProps) {
                       roomId={roomId}
                       onStatusChange={handleStatusChange}
                       isPlanner={isPlanner}
+                      onStartPomodoro={() =>
+                        router.push(
+                          `/rooms/${roomId}/pomodoro?taskId=${task.id}`
+                        )
+                      }
                     />
                   ))}
                 </CardContent>
@@ -292,6 +307,9 @@ export function TaskList({ roomId, isPlanner }: TaskListProps) {
                   onStatusChange={handleStatusChange}
                   isPlanner={isPlanner}
                   viewMode="list"
+                  onStartPomodoro={() =>
+                    router.push(`/rooms/${roomId}/pomodoro?taskId=${task.id}`)
+                  }
                 />
               ))}
             </div>

@@ -63,15 +63,35 @@ export type Invitation = {
   updatedAt: string;
 };
 
+export type Visit = {
+  id: string;
+  startTime: string;
+  endTime: string | null;
+  createdAt: string;
+  userId: string;
+  taskId: string;
+  // 必要に応じてpomoSessions: PomodoroSession[] なども追加可能
+};
+
 export type PomodoroSession = {
   id: string;
   startTime: string;
   endTime: string | null;
-  duration: number;
-  isCompleted: boolean;
-  taskId: string | null;
-  userId: string;
+  completed: boolean;
+  notes?: string | null;
   createdAt: string;
+  visitId: string;
+  taskId: string;
+  recording?: Recording | null;
+};
+
+export type Recording = {
+  id: string;
+  videoUrl: string;
+  duration: number;
+  createdAt: string;
+  taskId: string;
+  sessionId: string;
 };
 
 // API応答の拡張型

@@ -18,3 +18,4 @@ ALTER TABLE "Recording" ADD CONSTRAINT "Recording_taskId_fkey" FOREIGN KEY ("tas
 
 -- AddForeignKey
 ALTER TABLE "Recording" ADD CONSTRAINT "Recording_sessionId_fkey" FOREIGN KEY ("sessionId") REFERENCES "PomoSession"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+

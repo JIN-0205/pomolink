@@ -8,8 +8,7 @@ const nextConfig: NextConfig = {
       "https://peaceful-panda-secondly.ngrok-free.app",
       "*.ngrok-free.app",
       "https://intent-insect-jointly.ngrok-free.app",
-      "https://tyler-commons-inclusive-jazz.trycloudflare.com",
-      "*.trycloudflare.com",
+
       "local-origin.dev",
       "*.local-origin.dev",
     ],
@@ -35,6 +34,7 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  reactStrictMode: false,
 };
 
 export default nextConfig;

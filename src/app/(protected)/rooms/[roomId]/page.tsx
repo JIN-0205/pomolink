@@ -29,13 +29,15 @@ import {
   UserPlus,
   Users,
 } from "lucide-react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 export default function RoomPage() {
   const { roomId } = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const defaultTab = searchParams.get("tab") ?? "overview";
   const { user } = useUser();
   useEffect(() => {
     console.log(user);
@@ -44,7 +46,7 @@ export default function RoomPage() {
   const [room, setRoom] = useState<RoomWithParticipants | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState(defaultTab);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
 

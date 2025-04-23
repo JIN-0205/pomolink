@@ -1,9 +1,9 @@
 "use client";
 
-import TaskDetails from "@/components/tasks/TaskDetail";
+import TaskDetail from "@/components/tasks/TaskDetail";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Recording, Task } from "@/types";
+import { PomodoroSession, Recording, Task, Visit } from "@/types";
 import { ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
@@ -24,9 +24,20 @@ export default function TaskPage({ params }: TaskPageProps) {
   const { roomId, taskId } = resolvedParams;
 
   const [task, setTask] = useState<Task | null>(null);
-  const [recordings, setRecordings] = useState<Recording[]>([]);
+  // const [recordings, setRecordings] = useState<Recording[]>([]);
+  const [, setRecordings] = useState<Recording[]>([]);
+  // const [visits, setVisits] = useState<Visit[]>([]);
+  // const [sessions, setSessions] = useState<PomodoroSession[]>([]);
+  const [, setVisits] = useState<Visit[]>([]);
+  const [, setSessions] = useState<PomodoroSession[]>([]);
+
   const [loading, setLoading] = useState(true);
-  const [recordingsLoading, setRecordingsLoading] = useState(true);
+  const [, setRecordingsLoading] = useState(true);
+  // const [recordingsLoading, setRecordingsLoading] = useState(true);
+  // const [visitsLoading, setVisitsLoading] = useState(true);
+  // const [sessionsLoading, setSessionsLoading] = useState(true);
+  const [, setVisitsLoading] = useState(true);
+  const [, setSessionsLoading] = useState(true);
 
   // タスクデータを取得
   useEffect(() => {
@@ -90,9 +101,55 @@ export default function TaskPage({ params }: TaskPageProps) {
     }
   }, [taskId]);
 
+  // タスクの訪問履歴を取得
+  useEffect(() => {
+    const fetchVisits = async () => {
+      try {
+        setVisitsLoading(true);
+        const response = await fetch(`/api/tasks/${taskId}/visits`);
+        if (!response.ok) {
+          setVisits([]);
+          return;
+        }
+        const data = await response.json();
+        setVisits(Array.isArray(data) ? data : []);
+      } catch {
+        setVisits([]);
+      } finally {
+        setVisitsLoading(false);
+      }
+    };
+    if (taskId) {
+      fetchVisits();
+    }
+  }, [taskId]);
+
+  // タスクのポモドーロセッション一覧を取得
+  useEffect(() => {
+    const fetchSessions = async () => {
+      try {
+        setSessionsLoading(true);
+        const response = await fetch(`/api/tasks/${taskId}`);
+        if (!response.ok) {
+          setSessions([]);
+          return;
+        }
+        const data = await response.json();
+        setSessions(Array.isArray(data.sessions) ? data.sessions : []);
+      } catch {
+        setSessions([]);
+      } finally {
+        setSessionsLoading(false);
+      }
+    };
+    if (taskId) {
+      fetchSessions();
+    }
+  }, [taskId]);
+
   // ルーム一覧へ戻る
   const handleBack = () => {
-    router.push(`/rooms/${roomId}/tasks`);
+    router.push(`/rooms/${roomId}?tab=tasks`);
   };
 
   if (loading) {
@@ -128,24 +185,11 @@ export default function TaskPage({ params }: TaskPageProps) {
 
       <div className="mb-8">
         <h2 className="text-2xl font-bold mb-4">タスク詳細</h2>
-        <TaskDetails task={task} recordings={recordings} />
+        <TaskDetail task={task} />
       </div>
 
-      {/* 録画セクション */}
-      {recordingsLoading ? (
-        <div className="p-4 border rounded-md bg-muted/30 mt-4">
-          <p className="text-sm text-muted-foreground">
-            録画データを読み込み中...
-          </p>
-        </div>
-      ) : recordings.length === 0 ? (
-        <div className="p-4 border rounded-md bg-muted/30 mt-4">
-          <p className="text-sm text-muted-foreground">
-            このタスクにはまだ録画データがありません。ポモドーロセッション中に録画機能を有効にすると、
-            作業の様子が5分→1分のタイムラプスとして記録されます。
-          </p>
-        </div>
-      ) : null}
+      {/* 録画セクション: TaskDetailコンポーネントで表示 */}
+      {/* 省略: ページレベルの録画取得・表示を削除しました */}
     </div>
   );
 }

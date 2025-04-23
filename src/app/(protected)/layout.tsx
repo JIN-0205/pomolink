@@ -48,10 +48,10 @@ export default function ProtectedLayout({
       active: pathname?.startsWith("/tasks"),
     },
     {
-      href: "/timer",
-      label: "タイマー",
+      href: "/media-test/webCodecs",
+      label: "WebCodecs",
       icon: Clock,
-      active: pathname?.startsWith("/timer"),
+      active: pathname?.startsWith("/media-test"),
     },
   ];
   if (!isLoaded || !isSignedIn || !userId) {

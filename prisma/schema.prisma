@@ -40,6 +40,7 @@ model User {
 
   // サブスクリプション情報
   subscription Subscription?
+  Visit        Visit[]
 }
 
 // ルームモデル
@@ -151,6 +152,9 @@ model Task {
 
   // タスクに関連する録画
   recordings Recording[]
+
+  // タスクに関連する訪問
+  visits Visit[]
 }
 
 // タスクの優先度
@@ -168,6 +172,24 @@ enum TaskStatus {
 }
 
 // シンプルなポモドーロセッションモデル
+model Visit {
+  id        String    @id @default(cuid())
+  startTime DateTime
+  endTime   DateTime?
+  createdAt DateTime  @default(now())
+
+  // 作業したユーザー
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // 対象タスク
+  taskId String
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  // この訪問中のポモドーロセッション
+  pomoSessions PomoSession[]
+}
+
 model PomoSession {
   id        String    @id @default(cuid())
   startTime DateTime
@@ -176,7 +198,9 @@ model PomoSession {
   notes     String?
   createdAt DateTime  @default(now())
 
-  // セッションを記録したユーザー (RoomParticipant経由で取得可能なので直接関連付けはなし)
+  // 紐付く訪問
+  visitId String
+  visit   Visit  @relation(fields: [visitId], references: [id], onDelete: Cascade)
 
   // 関連するタスク
   taskId String
@@ -188,18 +212,16 @@ model PomoSession {
 
 // 録画データモデル（新規追加）
 model Recording {
-  id        String   @id @default(cuid())
-  videoUrl  String // Firebase Storage内のURL
-  duration  Int // 動画の長さ（秒）
-  createdAt DateTime @default(now())
-
-  // 関連するタスク
-  taskId String
-  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
-
-  // 関連するセッション
+  id        String      @id @default(cuid())
+  videoUrl  String
+  duration  Int
+  createdAt DateTime    @default(now())
+  taskId    String
   sessionId String      @unique
+  task      Task        @relation(fields: [taskId], references: [id], onDelete: Cascade)
   session   PomoSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("Recording")
 }
 
 // サブスクリプションモデル (Stripe連携用)

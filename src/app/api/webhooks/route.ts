@@ -57,11 +57,18 @@ export async function POST(req: Request) {
 
   if (evt.type === "user.created") {
     const { id, email_addresses, first_name, image_url } = evt.data;
+    const email = email_addresses[0].email_address;
     try {
-      const newUser = await prisma.user.create({
-        data: {
+      const newUser = await prisma.user.upsert({
+        where: { email },
+        update: {
           clerkId: id,
-          email: email_addresses[0].email_address,
+          name: first_name,
+          imageUrl: image_url,
+        },
+        create: {
+          clerkId: id,
+          email,
           name: first_name,
           imageUrl: image_url,
         },
@@ -70,8 +77,8 @@ export async function POST(req: Request) {
         status: 201,
       });
     } catch (err) {
-      console.error("Error creating user:", err);
-      return new Response("Error creating user", { status: 500 });
+      console.error("Error upserting user:", err);
+      return new Response("Error upserting user", { status: 500 });
     }
   }
 

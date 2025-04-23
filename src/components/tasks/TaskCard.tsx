@@ -27,6 +27,7 @@ interface TaskCardProps {
   onStatusChange: (taskId: string, newStatus: string) => void;
   isPlanner: boolean;
   viewMode?: "kanban" | "list";
+  onStartPomodoro?: () => void;
 }
 
 export function TaskCard({
@@ -35,6 +36,7 @@ export function TaskCard({
   onStatusChange,
   isPlanner,
   viewMode = "kanban",
+  onStartPomodoro,
 }: TaskCardProps) {
   const router = useRouter();
 
@@ -261,7 +263,11 @@ export function TaskCard({
               className="w-full"
               onClick={(e) => {
                 e.stopPropagation();
-                onStatusChange(task.id, "IN_PROGRESS");
+                if (onStartPomodoro) {
+                  onStartPomodoro();
+                } else {
+                  onStatusChange(task.id, "IN_PROGRESS");
+                }
               }}
             >
               <PlayCircle className="mr-2 h-4 w-4" />
