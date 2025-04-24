@@ -49,10 +49,11 @@ export default function PomodoroPage() {
   const [isLoading, setIsLoading] = useState(!!taskId);
   const [timerType, setTimerType] = useState<TimerType>("work");
   const [timerState, setTimerState] = useState<TimerState>("idle");
-  const [workDuration, setWorkDuration] = useState(10); // 作業時間（分）
+  const [workDuration, setWorkDuration] = useState(5); // 作業時間（分）
   const [breakDuration, setBreakDuration] = useState(1); // 休憩時間（分）
   const [timeLeft, setTimeLeft] = useState(workDuration * 60); // 初期値を作業時間に設定
   const [totalTime, setTotalTime] = useState(workDuration * 60);
+  const [timerEndTime, setTimerEndTime] = useState<number | null>(null); // ←終了予定時刻（UNIX ms）を追加
   const [cyclesCompleted, setCyclesCompleted] = useState(0);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [visitId, setVisitId] = useState<string | null>(initialVisitId);
@@ -126,9 +127,11 @@ export default function PomodoroPage() {
       if (timerType === "work") {
         setTimeLeft(workDuration * 60);
         setTotalTime(workDuration * 60);
+        setTimerEndTime(null);
       } else {
         setTimeLeft(breakDuration * 60);
         setTotalTime(breakDuration * 60);
+        setTimerEndTime(null);
       }
     }
   }, [workDuration, breakDuration, timerType, timerState]);
@@ -189,6 +192,10 @@ export default function PomodoroPage() {
 
     // タイマー状態を変更（録画開始の後に行う）
     console.log("タイマー状態を running に設定");
+    // 終了予定時刻をセット
+    const durationSec =
+      timerType === "work" ? workDuration * 60 : breakDuration * 60;
+    setTimerEndTime(Date.now() + durationSec * 1000);
     setTimerState("running");
   };
 
@@ -196,11 +203,13 @@ export default function PomodoroPage() {
   const pauseTimer = () => {
     if (timerState !== "running") return;
     setTimerState("paused");
+    setTimerEndTime(null); // 一時停止時は終了予定時刻をクリア
   };
 
   // タイマーのスキップ
   const skipTimer = () => {
     if (timerState !== "running" && timerState !== "paused") return;
+    setTimerEndTime(null); // スキップ時もクリア
     handleTimerCompleted();
   };
 
@@ -279,6 +288,7 @@ export default function PomodoroPage() {
 
   // タイマーの完了処理
   const handleTimerCompleted = useCallback(async () => {
+    setTimerEndTime(null); // 完了時もクリア
     if (timerType === "work") {
       // 録画停止
       stopRecording();
@@ -408,22 +418,25 @@ export default function PomodoroPage() {
   // タイマーのカウントダウン
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    if (timerState === "running") {
+    if (timerState === "running" && timerEndTime) {
       interval = setInterval(() => {
-        setTimeLeft((prevTime) => {
-          if (prevTime <= 1) {
-            clearInterval(interval);
-            handleTimerCompleted();
-            return 0;
-          }
-          return prevTime - 1;
-        });
-      }, 1000);
+        const now = Date.now();
+        const secondsLeft = Math.max(
+          0,
+          Math.round((timerEndTime - now) / 1000)
+        );
+        setTimeLeft(secondsLeft);
+        if (secondsLeft <= 0) {
+          clearInterval(interval);
+          setTimerEndTime(null);
+          handleTimerCompleted();
+        }
+      }, 250); // 250msごとにチェックして滑らかに
     }
     return () => {
       clearInterval(interval);
     };
-  }, [timerState, handleTimerCompleted]);
+  }, [timerState, timerEndTime, handleTimerCompleted]);
 
   // 録画中は1秒毎にvideoRefからフレームをキャプチャ
   // フレームキャプチャは useFrameCapture フック内で自動的に行われるようになったため、
