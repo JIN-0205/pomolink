@@ -1,5 +1,6 @@
 // app/api/tasks/[taskId]/recordings/route.ts
 import prisma from "@/lib/db";
+import { app as firebaseAdminApp, getStorage } from "@/lib/firebase-admin";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -82,15 +83,19 @@ export async function GET(
       return NextResponse.json([]);
     }
 
-    // フロントエンド向けにデータを整形
-    const formattedRecordings = recordings.map((recording) => ({
-      id: recording.id,
-      taskId: recording.taskId,
-      sessionId: recording.sessionId,
-      videoUrl: recording.videoUrl,
-      duration: recording.duration,
-      createdAt: recording.createdAt.toISOString(),
-    }));
+    // videoUrlがパスの場合は署名付きURLに変換
+    const formattedRecordings = await Promise.all(
+      recordings.map(async (recording) => ({
+        id: recording.id,
+        taskId: recording.taskId,
+        sessionId: recording.sessionId,
+        videoUrl: recording.videoUrl.startsWith("http")
+          ? recording.videoUrl
+          : await getDownloadUrl(recording.videoUrl),
+        duration: recording.duration,
+        createdAt: recording.createdAt.toISOString(),
+      }))
+    );
 
     return NextResponse.json(formattedRecordings);
   } catch (error) {
@@ -100,4 +105,15 @@ export async function GET(
       { status: 500 }
     );
   }
+}
+
+// Firebase Storageの署名付きURLを生成する関数
+async function getDownloadUrl(path: string): Promise<string> {
+  const storage = getStorage(firebaseAdminApp);
+  const file = storage.bucket().file(path);
+  const [url] = await file.getSignedUrl({
+    action: "read",
+    expires: Date.now() + 60 * 60 * 1000, // 1時間有効
+  });
+  return url;
 }

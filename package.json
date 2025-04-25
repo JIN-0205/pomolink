@@ -28,6 +28,7 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "firebase": "^11.6.0",
+    "firebase-admin": "^13.3.0",
     "lucide-react": "^0.487.0",
     "mp4-muxer": "^5.2.1",
     "next": "15.2.4",

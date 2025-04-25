@@ -138,6 +138,7 @@ const TaskDetail: React.FC<TaskDetailProps> = ({ task }) => {
                     <video
                       src={rec.videoUrl}
                       controls
+                      crossOrigin="anonymous"
                       className="w-full h-auto rounded mb-2"
                     />
                     <p className="text-xs text-muted-foreground">
