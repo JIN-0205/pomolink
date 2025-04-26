@@ -53,6 +53,12 @@ export default function ProtectedLayout({
       icon: Clock,
       active: pathname?.startsWith("/media-test"),
     },
+    {
+      href: "/media-test/ImageAnalyzer",
+      label: "Image Analyzer",
+      icon: Clock,
+      active: pathname?.startsWith("/media-test/ImageAnalyzer"),
+    },
   ];
   if (!isLoaded || !isSignedIn || !userId) {
     return (

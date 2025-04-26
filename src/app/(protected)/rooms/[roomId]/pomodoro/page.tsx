@@ -49,7 +49,7 @@ export default function PomodoroPage() {
   const [isLoading, setIsLoading] = useState(!!taskId);
   const [timerType, setTimerType] = useState<TimerType>("work");
   const [timerState, setTimerState] = useState<TimerState>("idle");
-  const [workDuration, setWorkDuration] = useState(2); // 作業時間（分）
+  const [workDuration, setWorkDuration] = useState(5); // 作業時間（分）
   const [breakDuration, setBreakDuration] = useState(1); // 休憩時間（分）
   const [timeLeft, setTimeLeft] = useState(workDuration * 60); // 初期値を作業時間に設定
   const [totalTime, setTotalTime] = useState(workDuration * 60);
@@ -82,7 +82,7 @@ export default function PomodoroPage() {
   const { uploadStatus, uploadVideo, resetUploadStatus } = useVideoUpload();
   const [encodedBlob, setEncodedBlob] = useState<Blob | null>(null);
   const [showVideoConfirm, setShowVideoConfirm] = useState(false);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null); // プレビュー用URL state
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   // タスク情報を取得
   useEffect(() => {
@@ -494,7 +494,7 @@ export default function PomodoroPage() {
           );
           captureFrame(videoRef.current);
         }
-      }, 5000); // 5秒間隔でキャプチャ（頻度を下げて安定性を確保）
+      }, 3000); // 5秒間隔でキャプチャ（頻度を下げて安定性を確保）
 
       return () => {
         console.log("タイマー実行中のフレームキャプチャを停止します");

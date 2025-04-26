@@ -17,7 +17,7 @@ interface UseCameraReturn {
  * カメラからの映像ストリームを取得・制御するフック
  */
 export function useCamera(options: UseCameraOptions = {}): UseCameraReturn {
-  const { width = 640, height = 360, frameRate = 30 } = options;
+  const { width = 640, height = 360, frameRate = 10 } = options;
 
   const videoRef = useRef<HTMLVideoElement>(
     null
