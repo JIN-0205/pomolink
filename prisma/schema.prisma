@@ -234,7 +234,7 @@ model Subscription {
   stripePriceId          String?
   stripeCurrentPeriodEnd DateTime?
   planType               PlanType  @default(FREE)
-  maxRoomMembers         Int       @default(3) // 無料プランのデフォルト制限
+  maxRoomMembers         Int       @default(3)
   createdAt              DateTime  @default(now())
   updatedAt              DateTime  @updatedAt
 }

@@ -128,3 +128,29 @@ export type ValidateCodeResponse = {
     participantCount: number;
   };
 };
+
+export interface ExtractedDocAIData {
+  fullText: string;
+  // pages?: protos.google.cloud.documentai.v1.Document.IPage[]; // 必要なら追加
+  // entities?: protos.google.cloud.documentai.v1.IEntity[];   // 必要なら追加
+}
+
+// クイズアイテムの型 (例)
+export interface QuizItem {
+  question: string;
+  options: string[];
+  answer: string;
+}
+
+// Gemini 処理後の統合データ型 (APIの成功レスポンス)
+export interface GeminiProcessedData extends ExtractedDocAIData {
+  summary: string;
+  quiz?: QuizItem[];
+  quizError?: string;
+  geminiError?: string;
+}
+
+// APIのエラーレスポンスの型
+export interface ErrorResponse {
+  message: string;
+}

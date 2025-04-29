@@ -4,6 +4,8 @@
     "Alignement",
     "cuid",
     "Deleter",
+    "DOCAI",
+    "documentai",
     "firebaseapp",
     "firebasestorage",
     "fkey",
@@ -19,6 +21,7 @@
     "sonner",
     "Timelapse",
     "trycloudflare",
-    "turbopack"
+    "turbopack",
+    "vertexai"
   ]
 }

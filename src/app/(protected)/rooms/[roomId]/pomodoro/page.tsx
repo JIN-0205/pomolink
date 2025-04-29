@@ -49,7 +49,7 @@ export default function PomodoroPage() {
   const [isLoading, setIsLoading] = useState(!!taskId);
   const [timerType, setTimerType] = useState<TimerType>("work");
   const [timerState, setTimerState] = useState<TimerState>("idle");
-  const [workDuration, setWorkDuration] = useState(5); // 作業時間（分）
+  const [workDuration, setWorkDuration] = useState(0.2); // 作業時間（分）
   const [breakDuration, setBreakDuration] = useState(1); // 休憩時間（分）
   const [timeLeft, setTimeLeft] = useState(workDuration * 60); // 初期値を作業時間に設定
   const [totalTime, setTotalTime] = useState(workDuration * 60);

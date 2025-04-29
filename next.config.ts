@@ -12,6 +12,9 @@ const nextConfig: NextConfig = {
       "local-origin.dev",
       "*.local-origin.dev",
     ],
+    serverActions: {
+      bodySizeLimit: "10mb",
+    },
   },
   images: {
     remotePatterns: [
