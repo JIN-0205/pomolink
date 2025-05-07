@@ -3,7 +3,9 @@
 import TaskDetail from "@/components/tasks/TaskDetail";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Session, Task } from "@/types";
+import { RoomWithParticipants, Session, Task } from "@/types";
+import { useUser } from "@clerk/nextjs";
+
 import { ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
@@ -27,6 +29,55 @@ export default function TaskPage({ params }: TaskPageProps) {
   const [task, setTask] = useState<Task | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const { user } = useUser();
+  const [room, setRoom] = useState<RoomWithParticipants | null>(null);
+  const [currentUserDbId, setCurrentUserDbId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchUserDbId = async () => {
+      if (!user?.id) return;
+
+      try {
+        const res = await fetch(`/api/users/me`);
+        if (res.ok) {
+          const userData = await res.json();
+          setCurrentUserDbId(userData.id);
+        }
+      } catch (error) {
+        console.error("ユーザー情報取得エラー:", error);
+      }
+    };
+
+    fetchUserDbId();
+  }, [user?.id]);
+
+  useEffect(() => {
+    const fetchRoomDetails = async () => {
+      try {
+        const res = await fetch(`/api/rooms/${roomId}`);
+        if (!res.ok) throw new Error("ルームの取得に失敗しました");
+
+        const data = await res.json();
+        setRoom(data);
+      } catch (error) {
+        console.error(error);
+        toast("エラー", {
+          description: "ルーム情報の取得に失敗しました",
+        });
+      }
+    };
+
+    if (roomId) {
+      fetchRoomDetails();
+    }
+  }, [roomId]);
+
+  const currentUserParticipant = room?.participants.find(
+    (p) => p.userId === currentUserDbId
+  );
+  const isCreator = room?.creatorId === currentUserDbId;
+  const isPlanner = currentUserParticipant?.role === "PLANNER" || isCreator;
 
   useEffect(() => {
     const fetchTaskAndSessions = async () => {
@@ -87,7 +138,8 @@ export default function TaskPage({ params }: TaskPageProps) {
       </Button>
       <div className="mb-8">
         <h2 className="text-2xl font-bold mb-4">タスク詳細</h2>
-        <TaskDetail task={task} sessions={sessions} />
+        <TaskDetail task={task} sessions={sessions} isPlanner={isPlanner} />
+        <div></div>
       </div>
     </div>
   );

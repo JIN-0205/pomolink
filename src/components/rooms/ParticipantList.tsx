@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Participant, User } from "@/types";
+import { RoomParticipant, User } from "@/types";
 import {
   Crown,
   MoreHorizontal,
@@ -33,7 +33,7 @@ import { toast } from "sonner";
 
 interface ParticipantListProps {
   roomId: string;
-  participants: Array<Participant & { user: User }>;
+  participants: Array<RoomParticipant & { user: User }>;
   isPlanner: boolean;
   creatorId: string;
 }

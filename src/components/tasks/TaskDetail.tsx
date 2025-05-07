@@ -30,10 +30,12 @@ import { toast } from "sonner";
 interface TaskDetailProps {
   task: Task;
   sessions: Session[];
+  isPlanner: boolean;
 }
 
-const TaskDetail: React.FC<TaskDetailProps> = ({ task, sessions }) => {
+const TaskDetail = ({ task, sessions, isPlanner }: TaskDetailProps) => {
   const router = useRouter();
+
   const [uploadDesc, setUploadDesc] = useState("");
   const [uploads, setUploads] = useState<Upload[]>([]);
   const [uploadLoading, setUploadLoading] = useState(false);
@@ -219,43 +221,49 @@ const TaskDetail: React.FC<TaskDetailProps> = ({ task, sessions }) => {
           </div>
 
           {/* ポモドーロ開始ボタン */}
-          <div className="pt-2">
-            <Button
-              onClick={startPomodoro}
-              className="w-full"
-              variant="default"
-              size="lg"
-            >
-              <Play className="mr-2 h-4 w-4" />
-              <Clock className="mr-2 h-4 w-4" />
-              このタスクでポモドーロを開始
-            </Button>
-          </div>
-
-          {/* 提出物アップロードUI */}
-          <div className="mb-6">
-            <h4 className="text-base font-semibold mb-2">提出物アップロード</h4>
-            <div className="flex flex-col sm:flex-row gap-2 items-end">
-              <input
-                type="file"
-                accept="image/*"
-                ref={fileInputRef}
-                disabled={uploadLoading}
-                multiple
-              />
-              <input
-                type="text"
-                className="border rounded p-2 text-sm flex-1"
-                placeholder="説明 (任意)"
-                value={uploadDesc}
-                onChange={(e) => setUploadDesc(e.target.value)}
-                disabled={uploadLoading}
-              />
-              <Button onClick={handleImageUpload} disabled={uploadLoading}>
-                アップロード
+          {!isPlanner && (
+            <div className="pt-2">
+              <Button
+                onClick={startPomodoro}
+                className="w-full"
+                variant="default"
+                size="lg"
+              >
+                <Play className="mr-2 h-4 w-4" />
+                <Clock className="mr-2 h-4 w-4" />
+                このタスクでポモドーロを開始
               </Button>
             </div>
-          </div>
+          )}
+
+          {/* 提出物アップロードUI */}
+          {!isPlanner && (
+            <div className="mb-6">
+              <h4 className="text-base font-semibold mb-2">
+                提出物アップロード
+              </h4>
+              <div className="flex flex-col sm:flex-row gap-2 items-end">
+                <input
+                  type="file"
+                  accept="image/*"
+                  ref={fileInputRef}
+                  disabled={uploadLoading}
+                  multiple
+                />
+                <input
+                  type="text"
+                  className="border rounded p-2 text-sm flex-1"
+                  placeholder="説明 (任意)"
+                  value={uploadDesc}
+                  onChange={(e) => setUploadDesc(e.target.value)}
+                  disabled={uploadLoading}
+                />
+                <Button onClick={handleImageUpload} disabled={uploadLoading}>
+                  アップロード
+                </Button>
+              </div>
+            </div>
+          )}
 
           {/* 日付ごとにTabsで提出物・セッション履歴を切り替え */}
           <div className="mb-6">

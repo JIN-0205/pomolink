@@ -49,9 +49,6 @@ export default function RoomPage() {
   const [activeTab, setActiveTab] = useState(defaultTab);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
-
-  const [debugVisible, setDebugVisible] = useState(false);
-
   const [currentUserDbId, setCurrentUserDbId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -245,55 +242,6 @@ export default function RoomPage() {
             </Button>
           )}
         </div>
-      </div>
-      <div className="mb-4">
-        <button
-          onClick={() => setDebugVisible(!debugVisible)}
-          className="text-xs bg-gray-200 dark:bg-gray-800 px-2 py-1 rounded"
-        >
-          デバッグ情報 {debugVisible ? "非表示" : "表示"}
-        </button>
-
-        {debugVisible && (
-          <div className="mt-2 p-4 border rounded bg-gray-50 dark:bg-gray-900 text-xs overflow-auto">
-            <h3 className="font-bold mb-2">ユーザー情報</h3>
-            <div>user?.id: {user?.id || "undefined"}</div>
-            <div>room.creatorId: {room.creatorId}</div>
-            <div>isCreator: {isCreator ? "true" : "false"}</div>
-
-            <h3 className="font-bold mt-3 mb-2">参加者検索</h3>
-            <div>
-              currentUserParticipant:{" "}
-              {currentUserParticipant
-                ? JSON.stringify({
-                    id: currentUserParticipant.id,
-                    role: currentUserParticipant.role,
-                    userId: currentUserParticipant.userId,
-                  })
-                : "not found"}
-            </div>
-            <div>isPlanner: {isPlanner ? "true" : "false"}</div>
-
-            <h3 className="font-bold mt-3 mb-2">参加者一覧</h3>
-            <div className="max-h-40 overflow-y-auto">
-              {room.participants.map((p, idx) => (
-                <div key={p.id} className="mb-1 pb-1 border-b">
-                  <div>
-                    Index {idx}: {p.user.name}
-                  </div>
-                  <div>参加者ID: {p.id}</div>
-                  <div>ユーザーID: {p.userId}</div>
-                  <div>ClerkID: {p.user.clerkId}</div>
-                  <div>ロール: {p.role}</div>
-                  <div>
-                    作成者?: {p.userId === room.creatorId ? "Yes" : "No"}
-                  </div>
-                  <div>自分?: {p.user.clerkId === user?.id ? "Yes" : "No"}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
 
       {/* タブナビゲーション */}
