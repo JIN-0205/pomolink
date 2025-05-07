@@ -28,7 +28,7 @@ export type Room = {
   creatorId: string;
 };
 
-export type Participant = {
+export type RoomParticipant = {
   id: string;
   userId: string;
   roomId: string;
@@ -42,7 +42,7 @@ export type Task = {
   description: string | null;
   status: "TODO" | "IN_PROGRESS" | "COMPLETED";
   priority: "LOW" | "MEDIUM" | "HIGH";
-  estimatedPomos: number;
+  estimatedPomos?: number | null;
   completedPomos: number;
   dueDate: string | null;
   roomId: string;
@@ -50,48 +50,62 @@ export type Task = {
   updatedAt: string;
 };
 
-export type Invitation = {
+export type Session = {
   id: string;
-  status: "PENDING" | "ACCEPTED" | "REJECTED" | "EXPIRED";
-  role: "PLANNER" | "PERFORMER";
-  email: string | null;
-  roomId: string;
-  senderId: string;
-  receiverId: string | null;
-  expiresAt: string | null;
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type Visit = {
-  id: string;
-  startTime: string;
-  endTime: string | null;
-  createdAt: string;
   userId: string;
   taskId: string;
-  // 必要に応じてpomoSessions: PomodoroSession[] なども追加可能
-};
-
-export type PomodoroSession = {
-  id: string;
   startTime: string;
   endTime: string | null;
   completed: boolean;
+  recordingUrl?: string | null;
+  recordingDuration?: number | null;
   notes?: string | null;
   createdAt: string;
-  visitId: string;
-  taskId: string;
-  recording?: Recording | null;
+  updatedAt: string;
+  dailyReportId?: string | null;
 };
 
-export type Recording = {
+export type Upload = {
   id: string;
-  videoUrl: string;
-  duration: number;
+  sessionId?: string | null;
+  userId: string;
+  fileUrl: string;
+  description?: string | null;
   createdAt: string;
-  taskId: string;
-  sessionId: string;
+  dailyReportId?: string | null;
+};
+
+export type DailyReport = {
+  id: string;
+  userId: string;
+  date: string;
+  createdAt: string;
+};
+
+export type Invitation = {
+  id: string;
+  createdAt: string;
+  expiresAt: string | null;
+  status: "PENDING" | "ACCEPTED" | "REJECTED" | "EXPIRED";
+  role: "PLANNER" | "PERFORMER";
+  roomId: string;
+  senderId: string;
+  receiverId?: string | null;
+  email?: string | null;
+  method: "LINK" | "EMAIL";
+};
+
+export type Subscription = {
+  id: string;
+  userId: string;
+  stripeCustomerId?: string | null;
+  stripeSubscriptionId?: string | null;
+  stripePriceId?: string | null;
+  stripeCurrentPeriodEnd?: string | null;
+  planType: "FREE" | "PRO" | "TEAM";
+  maxRoomMembers: number;
+  createdAt: string;
+  updatedAt: string;
 };
 
 // API応答の拡張型
@@ -101,7 +115,7 @@ export type RoomWithParticipantCount = Room & {
 };
 
 export type RoomWithParticipants = Room & {
-  participants: (Participant & {
+  participants: (RoomParticipant & {
     user: User;
   })[];
 };

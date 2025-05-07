@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
 // タスク詳細取得API
 export async function GET(
   req: NextRequest,
-  { params }: { params: { taskId: string } }
+  { params }: { params: Promise<{ taskId: string }> }
 ) {
   try {
     const { userId } = await auth();
@@ -23,8 +23,9 @@ export async function GET(
     }
 
     // タスクを取得
+    const { taskId } = await params;
     const task = await prisma.task.findUnique({
-      where: { id: params.taskId },
+      where: { id: taskId },
       include: {
         room: {
           include: {
@@ -60,7 +61,7 @@ export async function GET(
 // タスク更新API
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { taskId: string } }
+  { params }: { params: Promise<{ taskId: string }> }
 ) {
   try {
     const { userId } = await auth();
@@ -87,8 +88,9 @@ export async function PATCH(
     } = await req.json();
 
     // タスクを取得
+    const { taskId } = await params;
     const task = await prisma.task.findUnique({
-      where: { id: params.taskId },
+      where: { id: taskId },
       include: {
         room: {
           include: {
@@ -125,7 +127,7 @@ export async function PATCH(
 
     // タスクを更新
     const updatedTask = await prisma.task.update({
-      where: { id: params.taskId },
+      where: { id: taskId },
       data: {
         title: title !== undefined ? title : undefined,
         description: description !== undefined ? description : undefined,
@@ -154,7 +156,7 @@ export async function PATCH(
 // タスク削除API
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { taskId: string } }
+  { params }: { params: Promise<{ taskId: string }> }
 ) {
   try {
     const { userId } = await auth();
@@ -170,9 +172,10 @@ export async function DELETE(
       return new NextResponse("ユーザーが見つかりません", { status: 404 });
     }
 
+    const { taskId } = await params;
     // タスクを取得
     const task = await db.task.findUnique({
-      where: { id: params.taskId },
+      where: { id: taskId },
       include: {
         room: {
           include: {
@@ -202,7 +205,7 @@ export async function DELETE(
 
     // タスクを削除（関連するセッションも自動で削除される）
     await db.task.delete({
-      where: { id: params.taskId },
+      where: { id: taskId },
     });
 
     return new NextResponse(null, { status: 204 });

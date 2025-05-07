@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 // タスク作成API
 export async function POST(
   req: NextRequest,
-  { params }: { params: { roomId: string } }
+  { params }: { params: Promise<{ roomId: string }> }
 ) {
   try {
     const { roomId } = await params;
@@ -79,7 +79,7 @@ export async function POST(
 // タスク一覧取得API
 export async function GET(
   req: NextRequest,
-  { params }: { params: { roomId: string } }
+  { params }: { params: Promise<{ roomId: string }> }
 ) {
   try {
     const { roomId } = await params;

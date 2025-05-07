@@ -1,5 +1,5 @@
 import { App, cert, getApps, initializeApp } from "firebase-admin/app";
-import { getStorage } from "firebase-admin/storage";
+import { getDownloadURL, getStorage } from "firebase-admin/storage";
 
 let app: App | undefined;
 
@@ -19,4 +19,4 @@ if (!getApps().length) {
   app = getApps()[0];
 }
 
-export { app, getStorage };
+export { app, getDownloadURL, getStorage };

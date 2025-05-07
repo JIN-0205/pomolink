@@ -5,9 +5,8 @@ const nextConfig: NextConfig = {
 
   experimental: {
     allowedDevOrigins: [
-      "https://peaceful-panda-secondly.ngrok-free.app",
-      "*.ngrok-free.app",
       "https://intent-insect-jointly.ngrok-free.app",
+      "*.ngrok-free.app",
 
       "local-origin.dev",
       "*.local-origin.dev",
@@ -21,6 +20,10 @@ const nextConfig: NextConfig = {
       {
         protocol: "https",
         hostname: "firebasestorage.googleapis.com",
+      },
+      {
+        protocol: "https",
+        hostname: "storage.googleapis.com",
       },
     ],
   },

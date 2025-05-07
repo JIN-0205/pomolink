@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
-import TaskDetails from "@/components/pomodoro/TaskDetails";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -19,6 +18,7 @@ import {
 } from "@/lib/utils";
 import { Task } from "@/types";
 
+import TaskSummary from "@/components/pomodoro/TaskSummary";
 import {
   Dialog,
   DialogContent,
@@ -42,7 +42,6 @@ export default function PomodoroPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const taskId = searchParams.get("taskId");
-  const initialVisitId = searchParams.get("visitId");
 
   // ステート
   const [task, setTask] = useState<Task | null>(null);
@@ -53,11 +52,8 @@ export default function PomodoroPage() {
   const [breakDuration, setBreakDuration] = useState(1); // 休憩時間（分）
   const [timeLeft, setTimeLeft] = useState(workDuration * 60); // 初期値を作業時間に設定
   const [totalTime, setTotalTime] = useState(workDuration * 60);
-  const [timerEndTime, setTimerEndTime] = useState<number | null>(null); // ←終了予定時刻（UNIX ms）を追加
-  const [cyclesCompleted, setCyclesCompleted] = useState(0);
-  const [sessionId, setSessionId] = useState<string | null>(null);
-  const [visitId, setVisitId] = useState<string | null>(initialVisitId);
-  const [standalone, setStandalone] = useState(!taskId); // タスクIDがない場合はスタンドアローンモード
+  const [timerEndTime, setTimerEndTime] = useState<number | null>(null);
+  const [sessionId, setSessionId] = useState<string | undefined>(undefined);
 
   // --- 録画・エンコード・アップロード用フック ---
   const {
@@ -88,25 +84,21 @@ export default function PomodoroPage() {
   useEffect(() => {
     const fetchTaskDetails = async () => {
       if (!taskId) {
-        setStandalone(true);
         setIsLoading(false);
         return;
       }
-
       try {
         setIsLoading(true);
         const res = await fetch(`/api/tasks/${taskId}`);
         if (!res.ok) {
-          // 404の場合はタスクが存在しないのでnullをセット
           if (res.status === 404) {
             setTask(null);
             return;
           }
           throw new Error("タスクの取得に失敗しました");
         }
-
         const data = await res.json();
-        setTask(data);
+        setTask(data.task || data); // APIが{task, sessions}返す場合も考慮
       } catch (error) {
         console.error(error);
         toast("エラー", {
@@ -117,7 +109,6 @@ export default function PomodoroPage() {
         setIsLoading(false);
       }
     };
-
     fetchTaskDetails();
   }, [taskId]);
 
@@ -143,24 +134,12 @@ export default function PomodoroPage() {
     console.log("startTimer 呼び出し");
 
     if (timerState === "idle" && timerType === "work") {
-      if (!standalone && taskId) {
+      if (taskId) {
         try {
-          // Visitが未作成なら作成し、ローカルに保存
-          if (visitId === null) {
-            const visitRes = await fetch(`/api/tasks/${taskId}/visits`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-            });
-            if (!visitRes.ok) throw new Error("Visit作成失敗");
-            const visitData = await visitRes.json();
-            setVisitId(visitData.id);
-          }
-
-          // PomoSessionを作成
           const res = await fetch(`/api/pomodoro/sessions`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ taskId, visitId }),
+            body: JSON.stringify({ taskId }),
           });
           if (!res.ok) {
             const errText = await res.text();
@@ -173,7 +152,7 @@ export default function PomodoroPage() {
         } catch (error) {
           console.error(error);
           toast("エラー", { description: "セッションの開始に失敗しました" });
-          return; // セッション作成失敗時は進まない
+          return;
         }
       }
 
@@ -222,24 +201,22 @@ export default function PomodoroPage() {
         encodedBlob,
         `timelapse/pomodoro-${sessionId}-${Date.now()}.mp4`
       );
-
-      // 2. pomoSession を更新
+      // 2. Session を更新
       await fetch(`/api/pomodoro/sessions/${sessionId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          videoUrl: downloadUrl,
+          recordingUrl: downloadUrl,
+          recordingDuration: workDuration,
           endTime: new Date().toISOString(),
           completed: true,
         }),
       });
-
       toast("動画を保存しました");
     } catch (error) {
       console.error("保存中にエラー:", error);
       toast("エラー", { description: "動画の保存に失敗しました" });
     } finally {
-      // ダイアログ閉じてクリア
       setShowVideoConfirm(false);
       if (previewUrl) {
         URL.revokeObjectURL(previewUrl);
@@ -256,11 +233,11 @@ export default function PomodoroPage() {
     previewUrl,
     resetStatus,
     clearFrames,
+    workDuration,
   ]);
 
   // 動画破棄
   const handleDiscardVideo = useCallback(async () => {
-    // 「キャンセル」時はセッション完了だけPATCH
     if (sessionId) {
       try {
         await fetch(`/api/pomodoro/sessions/${sessionId}`, {
@@ -301,7 +278,6 @@ export default function PomodoroPage() {
       toast("ポモドーロ完了", {
         description: "お疲れさまでした！休憩時間です。",
       });
-      setCyclesCompleted((prev) => prev + 1);
       setTimerType("break");
       setTimeLeft(breakDuration * 60);
       setTotalTime(breakDuration * 60);
@@ -314,26 +290,6 @@ export default function PomodoroPage() {
 
       // 少し待ってからフレームの状況を確認
       await new Promise((resolve) => setTimeout(resolve, 500));
-
-      // フレームが空の場合は手動でキャプチャを試みる
-      if (frames.length === 0 && videoRef.current) {
-        console.log("フレームが空のため手動キャプチャを実行");
-        const tempCanvas = document.createElement("canvas");
-        tempCanvas.width = 640;
-        tempCanvas.height = 360;
-        const ctx = tempCanvas.getContext("2d");
-        if (ctx) {
-          ctx.drawImage(
-            videoRef.current,
-            0,
-            0,
-            tempCanvas.width,
-            tempCanvas.height
-          );
-          frames.push(tempCanvas);
-        }
-        await new Promise((resolve) => setTimeout(resolve, 500));
-      }
 
       console.log(`キャプチャしたフレーム: ${frames.length}枚`);
 
@@ -362,6 +318,23 @@ export default function PomodoroPage() {
           description: "録画フレームがないため、動画は生成されませんでした",
         });
       }
+      if (task && taskId) {
+        try {
+          const res = await fetch(`/api/tasks/${taskId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              completedPomos: (task.completedPomos ?? 0) + 1,
+            }),
+          });
+          if (res.ok) {
+            const updatedTask = await res.json();
+            setTask(updatedTask);
+          }
+        } catch (e) {
+          console.error("completedPomos更新失敗", e);
+        }
+      }
     } else {
       // 休憩セッション完了の処理
       playNotificationSound();
@@ -376,7 +349,7 @@ export default function PomodoroPage() {
       setTimeLeft(workDuration * 60);
       setTotalTime(workDuration * 60);
       setTimerState("idle");
-      setSessionId(null); // 新しいセッションのため初期化
+      setSessionId(undefined); // 新しいセッションのため初期化
     }
   }, [
     timerType,
@@ -387,6 +360,8 @@ export default function PomodoroPage() {
     encodeFrames,
     videoRef,
     captureFrame,
+    task,
+    taskId,
   ]);
 
   // タスクのステータスを更新する
@@ -438,40 +413,6 @@ export default function PomodoroPage() {
     };
   }, [timerState, timerEndTime, handleTimerCompleted]);
 
-  // 録画中は1秒毎にvideoRefからフレームをキャプチャ
-  // フレームキャプチャは useFrameCapture フック内で自動的に行われるようになったため、
-  // 競合を避けるためこの useEffect は無効化
-  /*
-  useEffect(() => {
-    let intervalId: NodeJS.Timeout | null = null;
-
-    if (isRecording && videoRef.current) {
-      console.log("フレームキャプチャ開始");
-      // captureFrame を呼び出す前にログ出力
-      console.log("videoRef.current の状態:", {
-        width: videoRef.current.videoWidth,
-        height: videoRef.current.videoHeight,
-        readyState: videoRef.current.readyState,
-      });
-
-      intervalId = setInterval(() => {
-        if (videoRef.current) {
-          console.log("フレームをキャプチャします");
-          captureFrame(videoRef.current);
-        }
-      }, 1000);
-    }
-
-    return () => {
-      if (intervalId) {
-        console.log("フレームキャプチャ停止");
-        clearInterval(intervalId);
-      }
-    };
-  }, [isRecording, videoRef, captureFrame]);
-  */
-
-  // 録画用に videoRef が変更されたら useFrameCapture に伝える
   useEffect(() => {
     if (videoRef.current && isRecording) {
       console.log("videoRef が変更されたため captureFrame を1回呼び出し");
@@ -485,7 +426,7 @@ export default function PomodoroPage() {
     if (timerState === "running" && isRecording && videoRef.current) {
       console.log("タイマー実行中のフレームキャプチャを開始します");
 
-      // 5秒ごとにフレームをキャプチャする
+      // 3秒ごとにフレームをキャプチャする
       const captureIntervalId = setInterval(() => {
         if (videoRef.current) {
           console.log(
@@ -494,7 +435,7 @@ export default function PomodoroPage() {
           );
           captureFrame(videoRef.current);
         }
-      }, 3000); // 5秒間隔でキャプチャ（頻度を下げて安定性を確保）
+      }, 3000); // 3秒間隔でキャプチャ（頻度を下げて安定性を確保）
 
       return () => {
         console.log("タイマー実行中のフレームキャプチャを停止します");
@@ -508,25 +449,15 @@ export default function PomodoroPage() {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (timerState === "running" || timerState === "paused") {
         e.preventDefault();
-        e.returnValue = "タイマーが実行中です。本当にページを離れますか？";
-        return e.returnValue;
+        // e.returnValue = "タイマーが実行中です。本当にページを離れますか？";
+        // return e.returnValue;
       }
     };
-
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => {
       window.removeEventListener("beforeunload", handleBeforeUnload);
     };
   }, [timerState]);
-
-  // ページ離脱時、セッションが未作成（=pomoSession数0）の場合のみvisitを削除
-  useEffect(() => {
-    return () => {
-      if (visitId && !sessionId && taskId) {
-        fetch(`/api/tasks/${taskId}/visits/${visitId}`, { method: "DELETE" });
-      }
-    };
-  }, [visitId, sessionId, taskId]);
 
   // 進捗率の計算
   const calculateProgress = (): number => {
@@ -547,10 +478,9 @@ export default function PomodoroPage() {
 
       <div className="grid gap-6">
         {/* タスク情報表示 - タスクがある場合のみ表示 */}
-        {!isLoading && task && <TaskDetails task={task} />}
+        {!isLoading && task && <TaskSummary task={task} />}
 
-        {/* スタンドアローンモードの設定セクション */}
-        {standalone && timerState === "idle" && (
+        {timerState === "idle" && (
           <Card className="overflow-hidden">
             <CardContent className="p-6">
               <h2 className="text-lg font-semibold mb-4">タイマー設定</h2>
@@ -621,20 +551,9 @@ export default function PomodoroPage() {
             </div>
             {/* サイクル情報 */}
             <div className="text-sm">
-              {standalone ? (
-                <>
-                  完了したサイクル:{" "}
-                  <span className="font-semibold">{cyclesCompleted}</span>
-                </>
-              ) : (
-                <>
-                  完了したポモドーロ:{" "}
-                  <span className="font-semibold">
-                    {task?.completedPomos || 0}
-                  </span>
-                  {task?.estimatedPomos && ` / ${task.estimatedPomos}`}
-                </>
-              )}
+              完了したポモドーロ:{" "}
+              <span className="font-semibold">{task?.completedPomos || 0}</span>
+              {task?.estimatedPomos && ` / ${task.estimatedPomos}`}
             </div>
           </CardContent>
         </Card>

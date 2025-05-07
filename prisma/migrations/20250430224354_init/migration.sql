@@ -89,6 +89,18 @@ CREATE TABLE "Task" (
 );
 
 -- CreateTable
+CREATE TABLE "Visit" (
+    "id" TEXT NOT NULL,
+    "startTime" TIMESTAMP(3) NOT NULL,
+    "endTime" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "userId" TEXT NOT NULL,
+    "taskId" TEXT NOT NULL,
+
+    CONSTRAINT "Visit_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "PomoSession" (
     "id" TEXT NOT NULL,
     "startTime" TIMESTAMP(3) NOT NULL,
@@ -96,9 +108,22 @@ CREATE TABLE "PomoSession" (
     "completed" BOOLEAN NOT NULL DEFAULT false,
     "notes" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "visitId" TEXT NOT NULL,
     "taskId" TEXT NOT NULL,
 
     CONSTRAINT "PomoSession_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Recording" (
+    "id" TEXT NOT NULL,
+    "videoUrl" TEXT NOT NULL,
+    "duration" INTEGER NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "taskId" TEXT NOT NULL,
+    "sessionId" TEXT NOT NULL,
+
+    CONSTRAINT "Recording_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -128,6 +153,9 @@ CREATE UNIQUE INDEX "Room_inviteCode_key" ON "Room"("inviteCode");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "RoomParticipant_userId_roomId_key" ON "RoomParticipant"("userId", "roomId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Recording_sessionId_key" ON "Recording"("sessionId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Subscription_userId_key" ON "Subscription"("userId");
@@ -160,7 +188,22 @@ ALTER TABLE "Invitation" ADD CONSTRAINT "Invitation_receiverId_fkey" FOREIGN KEY
 ALTER TABLE "Task" ADD CONSTRAINT "Task_roomId_fkey" FOREIGN KEY ("roomId") REFERENCES "Room"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "Visit" ADD CONSTRAINT "Visit_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Visit" ADD CONSTRAINT "Visit_taskId_fkey" FOREIGN KEY ("taskId") REFERENCES "Task"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "PomoSession" ADD CONSTRAINT "PomoSession_visitId_fkey" FOREIGN KEY ("visitId") REFERENCES "Visit"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "PomoSession" ADD CONSTRAINT "PomoSession_taskId_fkey" FOREIGN KEY ("taskId") REFERENCES "Task"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Recording" ADD CONSTRAINT "Recording_taskId_fkey" FOREIGN KEY ("taskId") REFERENCES "Task"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Recording" ADD CONSTRAINT "Recording_sessionId_fkey" FOREIGN KEY ("sessionId") REFERENCES "PomoSession"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Subscription" ADD CONSTRAINT "Subscription_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
