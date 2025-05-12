@@ -43,7 +43,7 @@ export function useVideoUpload(): UseVideoUploadReturn {
 
       try {
         // アップロード先のパスを決定
-        const uploadPath = path || `videos/${Date.now()}.mp4`;
+        const uploadPath = path || `videos/${crypto.randomUUID()}.mp4`;
         const fileRef = ref(storage, uploadPath);
 
         // Firebase Storageにアップロード

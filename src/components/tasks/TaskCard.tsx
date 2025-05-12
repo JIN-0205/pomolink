@@ -13,6 +13,7 @@ import { ja } from "date-fns/locale";
 import {
   Calendar,
   CheckCircle2,
+  CircleChevronLeft,
   Clock,
   Edit,
   MoreVertical,
@@ -97,9 +98,9 @@ export function TaskCard({
       case "HIGH":
         return "destructive";
       case "MEDIUM":
-        return "default";
+        return "main";
       case "LOW":
-        return "outline";
+        return "sub";
       default:
         return "outline";
     }
@@ -144,6 +145,7 @@ export function TaskCard({
                   <Button
                     size="sm"
                     variant="ghost"
+                    className="hover:bg-main/10"
                     onClick={(e) => {
                       e.stopPropagation();
                       onStatusChange(task.id, "IN_PROGRESS");
@@ -156,6 +158,7 @@ export function TaskCard({
                   <Button
                     size="sm"
                     variant="ghost"
+                    className="hover:bg-main/10"
                     onClick={(e) => {
                       e.stopPropagation();
                       onStatusChange(task.id, "COMPLETED");
@@ -254,41 +257,66 @@ export function TaskCard({
         </div>
       </div>
 
-      {task.status !== "COMPLETED" && (
-        <div className="mt-3 flex justify-end">
-          {task.status === "TODO" ? (
+      <div className="mt-3 flex justify-end">
+        {task.status === "TODO" ? (
+          <Button
+            size="sm"
+            variant="outline"
+            className="w-full"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (onStartPomodoro) {
+                onStartPomodoro();
+              } else {
+                onStatusChange(task.id, "IN_PROGRESS");
+              }
+            }}
+          >
+            <PlayCircle className="mr-2 h-4 w-4" />
+            開始
+          </Button>
+        ) : task.status === "IN_PROGRESS" ? (
+          <Button
+            size="sm"
+            variant="outline"
+            className="w-full"
+            onClick={(e) => {
+              e.stopPropagation();
+              onStatusChange(task.id, "COMPLETED");
+            }}
+          >
+            <CheckCircle2 className="mr-2 h-4 w-4" />
+            完了
+          </Button>
+        ) : (
+          <div className="flex gap-2 w-full">
             <Button
               size="sm"
               variant="outline"
-              className="w-full"
+              className="flex-1 min-w-0 w-full"
               onClick={(e) => {
                 e.stopPropagation();
-                if (onStartPomodoro) {
-                  onStartPomodoro();
-                } else {
-                  onStatusChange(task.id, "IN_PROGRESS");
-                }
+                onStatusChange(task.id, "TODO");
               }}
             >
-              <PlayCircle className="mr-2 h-4 w-4" />
-              開始
+              <CircleChevronLeft className=" h-4 w-4" />
+              未着手
             </Button>
-          ) : (
             <Button
               size="sm"
               variant="outline"
-              className="w-full"
+              className="flex-1 min-w-0"
               onClick={(e) => {
                 e.stopPropagation();
-                onStatusChange(task.id, "COMPLETED");
+                onStatusChange(task.id, "IN_PROGRESS");
               }}
             >
-              <CheckCircle2 className="mr-2 h-4 w-4" />
-              完了
+              <CircleChevronLeft className=" h-4 w-4" />
+              進行中
             </Button>
-          )}
-        </div>
-      )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

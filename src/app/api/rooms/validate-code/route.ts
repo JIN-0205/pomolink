@@ -25,6 +25,13 @@ export async function GET(req: NextRequest) {
         name: true,
         description: true,
         isPrivate: true,
+        creator: {
+          select: {
+            id: true,
+            name: true,
+            imageUrl: true,
+          },
+        },
         _count: {
           select: {
             participants: true,
@@ -45,6 +52,7 @@ export async function GET(req: NextRequest) {
         description: room.description,
         isPrivate: room.isPrivate,
         participantCount: room._count.participants,
+        creator: room.creator,
       },
     });
   } catch (error) {

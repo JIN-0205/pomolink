@@ -54,7 +54,7 @@ export function RoomList() {
 
   if (error) {
     return (
-      <div className="w-full py-12 text-center">
+      <div className="w-full py-12 text-center ">
         <p className="text-destructive">{error}</p>
         <Button
           variant="outline"
@@ -69,18 +69,20 @@ export function RoomList() {
 
   if (rooms.length === 0) {
     return (
-      <EmptyState
-        title="ルームがありません"
-        description="新しいルームを作成して始めましょう"
-        action={
-          <Link href="/rooms/create">
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              ルームを作成
-            </Button>
-          </Link>
-        }
-      />
+      <div className="bg-white">
+        <EmptyState
+          title="ルームがありません"
+          description="新しいルームを作成して始めましょう"
+          action={
+            <Link href="/rooms/create">
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                ルームを作成
+              </Button>
+            </Link>
+          }
+        />
+      </div>
     );
   }
 
@@ -89,7 +91,7 @@ export function RoomList() {
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-semibold">参加中のルーム</h2>
         <Link href="/rooms/create">
-          <Button>
+          <Button variant="main">
             <Plus className="mr-2 h-4 w-4" />
             ルームを作成
           </Button>

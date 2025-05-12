@@ -19,13 +19,15 @@ import {
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { Session, Task, Upload } from "@/types";
+import type { Session, Task, UploadType } from "@/types";
 import { format } from "date-fns";
 import { Clock, Play } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import useSWR from "swr";
+import { ImageUpload } from "./ImageUpload";
 
 interface TaskDetailProps {
   task: Task;
@@ -33,35 +35,32 @@ interface TaskDetailProps {
   isPlanner: boolean;
 }
 
+const fetcher = async (url: string): Promise<{ uploads: UploadType[] }> => {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("Failed to fetch");
+  return res.json();
+};
+
 const TaskDetail = ({ task, sessions, isPlanner }: TaskDetailProps) => {
   const router = useRouter();
 
   const [uploadDesc, setUploadDesc] = useState("");
-  const [uploads, setUploads] = useState<Upload[]>([]);
   const [uploadLoading, setUploadLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedImageIndex, setSelectedImageIndex] = useState<number>(0);
-  const [selectedImageGroup, setSelectedImageGroup] = useState<Upload[]>([]);
+  const [selectedImageGroup, setSelectedImageGroup] = useState<UploadType[]>(
+    []
+  );
   const [api, setApi] = useState<CarouselApi | null>(null);
   const [count, setCount] = useState(0);
   const [current, setCurrent] = useState(0);
 
-  // 提出物（画像）一覧を初回取得
-  useEffect(() => {
-    const fetchUploads = async () => {
-      try {
-        const res = await fetch(`/api/tasks/${task.id}/upload`);
-        if (res.ok) {
-          const data = await res.json();
-          setUploads(data.uploads || []);
-        }
-      } catch (e) {
-        console.error("提出物取得エラー:", e);
-      }
-    };
-    fetchUploads();
-  }, [task.id]);
+  const { data, mutate } = useSWR<{ uploads: UploadType[] }>(
+    `/api/tasks/${task.id}/upload`,
+    fetcher
+  );
+  const uploads = useMemo(() => data?.uploads ?? [], [data]);
 
   // 画像アップロード
   const handleImageUpload = async () => {
@@ -79,8 +78,9 @@ const TaskDetail = ({ task, sessions, isPlanner }: TaskDetailProps) => {
         body: formData,
       });
       if (res.ok) {
-        const data = await res.json();
-        setUploads((prev) => [...data.uploads, ...prev]);
+        const { uploads: newUploads } = await res.json();
+        mutate({ uploads: [...newUploads, ...uploads] }, false); // 楽観的UI
+        mutate(); // サーバーから再取得
         if (fileInputRef.current) fileInputRef.current.value = "";
         setUploadDesc("");
         toast("提出物をアップロードしました");
@@ -98,14 +98,14 @@ const TaskDetail = ({ task, sessions, isPlanner }: TaskDetailProps) => {
   // 日付ごとに提出物とセッションをまとめてグループ化
   const groupedByDate = useMemo(() => {
     // 1. 提出物を日付ごとにグループ化
-    const uploadsByDate: Record<string, Upload[]> = uploads.reduce(
+    const uploadsByDate: Record<string, UploadType[]> = uploads.reduce(
       (acc, upload) => {
         const date = format(new Date(upload.createdAt), "yyyy-MM-dd");
         if (!acc[date]) acc[date] = [];
         acc[date].push(upload);
         return acc;
       },
-      {} as Record<string, Upload[]>
+      {} as Record<string, UploadType[]>
     );
     // 2. セッションも日付ごとにグループ化
     const sessionsByDate: Record<string, Session[]> = sessions.reduce(
@@ -142,12 +142,15 @@ const TaskDetail = ({ task, sessions, isPlanner }: TaskDetailProps) => {
   };
 
   // 画像クリック時にインデックスとグループもセット
-  const handleImageClick = useCallback((fileUrl: string, uploads: Upload[]) => {
-    const idx = uploads.findIndex((u) => u.fileUrl === fileUrl);
-    setSelectedImage(fileUrl);
-    setSelectedImageIndex(idx >= 0 ? idx : 0);
-    setSelectedImageGroup(uploads);
-  }, []);
+  const handleImageClick = useCallback(
+    (fileUrl: string, uploads: UploadType[]) => {
+      const idx = uploads.findIndex((u) => u.fileUrl === fileUrl);
+      setSelectedImage(fileUrl);
+      setSelectedImageIndex(idx >= 0 ? idx : 0);
+      setSelectedImageGroup(uploads);
+    },
+    []
+  );
 
   useEffect(() => {
     if (api && selectedImage && selectedImageGroup.length > 0) {
@@ -179,8 +182,8 @@ const TaskDetail = ({ task, sessions, isPlanner }: TaskDetailProps) => {
                   task.priority === "HIGH"
                     ? "destructive"
                     : task.priority === "MEDIUM"
-                      ? "default"
-                      : "outline"
+                      ? "main"
+                      : "sub"
                 }
               >
                 {task.priority === "HIGH"
@@ -238,31 +241,12 @@ const TaskDetail = ({ task, sessions, isPlanner }: TaskDetailProps) => {
 
           {/* 提出物アップロードUI */}
           {!isPlanner && (
-            <div className="mb-6">
-              <h4 className="text-base font-semibold mb-2">
-                提出物アップロード
-              </h4>
-              <div className="flex flex-col sm:flex-row gap-2 items-end">
-                <input
-                  type="file"
-                  accept="image/*"
-                  ref={fileInputRef}
-                  disabled={uploadLoading}
-                  multiple
-                />
-                <input
-                  type="text"
-                  className="border rounded p-2 text-sm flex-1"
-                  placeholder="説明 (任意)"
-                  value={uploadDesc}
-                  onChange={(e) => setUploadDesc(e.target.value)}
-                  disabled={uploadLoading}
-                />
-                <Button onClick={handleImageUpload} disabled={uploadLoading}>
-                  アップロード
-                </Button>
-              </div>
-            </div>
+            <ImageUpload
+              taskId={task.id}
+              onUploadSuccess={handleImageUpload}
+              uploadLoading={uploadLoading}
+              setUploadLoading={setUploadLoading}
+            />
           )}
 
           {/* 日付ごとにTabsで提出物・セッション履歴を切り替え */}

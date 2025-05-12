@@ -1,25 +1,32 @@
 "use client";
 
 import { JoinWithCodeForm } from "@/components/rooms/JoinWithCodeForm";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Loader2 } from "lucide-react";
+import { Info, Loader2, Users, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-
 interface RoomInfo {
   id: string;
   name: string;
   description: string | null;
   isPrivate: boolean;
   participantCount: number;
+  creator: {
+    id: string;
+    name: string;
+    imageUrl: string | null;
+  };
 }
 
 export default function JoinPage() {
@@ -51,6 +58,7 @@ export default function JoinPage() {
         const data = await response.json();
         if (data.valid) {
           setRoomInfo(data.room);
+          console.log("招待コードの検証結果:", data);
         } else {
           setError("無効な招待コードです");
         }
@@ -161,47 +169,84 @@ export default function JoinPage() {
   if (inviteCode && roomInfo) {
     return (
       <div className="container py-12 max-w-md mx-auto">
-        <Card>
-          <CardHeader>
-            <CardTitle>ルームに参加</CardTitle>
-            <CardDescription>
-              以下のルームへの招待を受け取りました
-            </CardDescription>
+        <Card className="border-0 shadow-md overflow-hidden pt-0 rounded-lg">
+          <div className="h-6 bg-indigo-500" />
+          <CardHeader className="pt-6">
+            <div className="flex justify-between items-start">
+              <div>
+                <CardTitle className="text-xl font-bold text-gray-900">
+                  {roomInfo.name}
+                </CardTitle>
+                <CardDescription className="mt-1">
+                  招待が届いています
+                </CardDescription>
+              </div>
+              <Badge
+                // variant="outline"
+                className="bg-indigo-50 text-indigo-700 border-indigo-100"
+              >
+                招待中
+              </Badge>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="p-4 border rounded-lg bg-muted/20">
-              <h3 className="font-medium text-lg">{roomInfo.name}</h3>
-              {roomInfo.description && (
-                <p className="text-muted-foreground mt-1">
-                  {roomInfo.description}
-                </p>
-              )}
-              <div className="flex items-center gap-2 mt-2">
-                <span className="text-sm">
-                  参加者: {roomInfo.participantCount}人
-                </span>
-                {roomInfo.isPrivate ? (
-                  <span className="text-xs bg-secondary text-secondary-foreground px-2 py-0.5 rounded-full">
-                    非公開
-                  </span>
-                ) : (
-                  <span className="text-xs border px-2 py-0.5 rounded-full">
-                    公開
-                  </span>
-                )}
+            <div className="rounded-lg bg-gray-50 p-4 border border-gray-100">
+              <h3 className="text-sm font-medium text-gray-700 mb-2 flex items-center">
+                <Info className="h-4 w-4 mr-1 text-indigo-500" />
+                ルーム情報
+              </h3>
+              <p className="text-sm text-gray-600 mb-4">
+                {roomInfo.description}
+              </p>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex items-center">
+                  <Users className="h-5 w-5 text-indigo-400 mr-2" />
+                  <div>
+                    <p className="text-xs text-gray-500">参加者</p>
+                    <p className="text-sm font-medium">
+                      {roomInfo.participantCount}人
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div className="flex flex-col space-y-2">
-              <Button onClick={joinRoom} disabled={isJoining}>
-                {isJoining && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                参加する
-              </Button>
-              <Button variant="outline" onClick={() => router.push("/rooms")}>
-                キャンセル
-              </Button>
+            <div className="flex items-center space-x-3 p-3 bg-indigo-50 rounded-lg">
+              <Avatar className="border-2 border-indigo-100">
+                <AvatarImage
+                  src={roomInfo.creator.imageUrl ?? undefined}
+                  alt={roomInfo.creator.name || "ユーザー"}
+                />
+                <AvatarFallback>
+                  {roomInfo.creator.name.charAt(0)}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <p className="text-sm font-medium">
+                  {roomInfo.creator.name}からの招待
+                </p>
+                <p className="text-xs text-gray-500">プランナー</p>
+              </div>
             </div>
           </CardContent>
+          <CardFooter className="flex gap-3 pt-2 pb-6">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => router.push("/rooms")}
+            >
+              <X className="mr-2 h-4 w-4" /> キャンセル
+            </Button>
+            <Button
+              className="flex-1 bg-indigo-500 hover:bg-indigo-600"
+              onClick={joinRoom}
+              disabled={isJoining}
+            >
+              {isJoining && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              参加する
+            </Button>
+          </CardFooter>
         </Card>
       </div>
     );

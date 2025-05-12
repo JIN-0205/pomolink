@@ -27,7 +27,7 @@ export function RoomCard({ room, participantCount = 0, role }: RoomCardProps) {
           <div className="flex items-center justify-between">
             <CardTitle className="text-xl">{room.name}</CardTitle>
             {role && (
-              <Badge variant={role === "PLANNER" ? "default" : "outline"}>
+              <Badge variant={role === "PLANNER" ? "main" : "outline"}>
                 {role === "PLANNER" ? "プランナー" : "パフォーマー"}
               </Badge>
             )}

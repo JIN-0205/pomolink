@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { RoomWithParticipants, Session, Task } from "@/types";
 import { useUser } from "@clerk/nextjs";
 
+import { getUserRole } from "@/lib/utils/role";
 import { ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
@@ -33,6 +34,8 @@ export default function TaskPage({ params }: TaskPageProps) {
   const { user } = useUser();
   const [room, setRoom] = useState<RoomWithParticipants | null>(null);
   const [currentUserDbId, setCurrentUserDbId] = useState<string | null>(null);
+
+  const { isPlanner } = getUserRole(room, currentUserDbId);
 
   useEffect(() => {
     const fetchUserDbId = async () => {
@@ -72,12 +75,6 @@ export default function TaskPage({ params }: TaskPageProps) {
       fetchRoomDetails();
     }
   }, [roomId]);
-
-  const currentUserParticipant = room?.participants.find(
-    (p) => p.userId === currentUserDbId
-  );
-  const isCreator = room?.creatorId === currentUserDbId;
-  const isPlanner = currentUserParticipant?.role === "PLANNER" || isCreator;
 
   useEffect(() => {
     const fetchTaskAndSessions = async () => {
@@ -139,7 +136,6 @@ export default function TaskPage({ params }: TaskPageProps) {
       <div className="mb-8">
         <h2 className="text-2xl font-bold mb-4">タスク詳細</h2>
         <TaskDetail task={task} sessions={sessions} isPlanner={isPlanner} />
-        <div></div>
       </div>
     </div>
   );

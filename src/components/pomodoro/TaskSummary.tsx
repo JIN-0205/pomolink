@@ -21,8 +21,8 @@ const TaskSummary: React.FC<TaskSummaryProps> = ({ task, sessions = [] }) => {
                   task.priority === "HIGH"
                     ? "destructive"
                     : task.priority === "MEDIUM"
-                      ? "default"
-                      : "outline"
+                      ? "main"
+                      : "sub"
                 }
               >
                 {task.priority === "HIGH"
@@ -32,13 +32,14 @@ const TaskSummary: React.FC<TaskSummaryProps> = ({ task, sessions = [] }) => {
                     : "低優先度"}
               </Badge>
               <Badge
-                variant={
-                  task.status === "COMPLETED"
-                    ? "secondary"
-                    : task.status === "IN_PROGRESS"
-                      ? "default"
-                      : "outline"
-                }
+                // variant={
+                //   task.status === "COMPLETED"
+                //     ? "outline"
+                //     : task.status === "IN_PROGRESS"
+                //       ? "outline"
+                //       : "outline"
+                // }
+                className={`bg-main`}
               >
                 {task.status === "COMPLETED"
                   ? "完了"

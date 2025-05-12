@@ -65,7 +65,8 @@ export type Session = {
   dailyReportId?: string | null;
 };
 
-export type Upload = {
+// 型名のUploadをUploadTypeにリネーム
+export type UploadType = {
   id: string;
   sessionId?: string | null;
   userId: string;

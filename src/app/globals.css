@@ -120,3 +120,16 @@
     @apply bg-background text-foreground;
   }
 }
+
+:root {
+  @theme {
+    /* --color-base: #f8f9fc; */
+    --color-main: oklch(58.5% 0.233 277.117);
+    --color-sub: oklch(76.5% 0.177 163.223);
+    --color-text: #111827;
+    --color-success: #10b981;
+    --color-alert: oklch(79.5% 0.184 86.047);
+    --color-error: #f43f5e;
+    --color-shadow: #e5e7eb;
+  }
+}

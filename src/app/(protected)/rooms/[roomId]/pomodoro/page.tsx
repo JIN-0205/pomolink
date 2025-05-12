@@ -614,7 +614,7 @@ export default function PomodoroPage() {
               <p className="text-red-500 mt-2">{encodingStatus.error}</p>
             )}
             <DialogFooter className="flex justify-end gap-2">
-              <Button variant="outline" onClick={handleDiscardVideo}>
+              <Button variant="sub" onClick={handleDiscardVideo}>
                 破棄
               </Button>
               <Button

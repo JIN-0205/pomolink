@@ -250,6 +250,10 @@ export default function CreateTaskPage() {
                           onSelect={field.onChange}
                           initialFocus
                           locale={ja}
+                          classNames={{
+                            day_selected:
+                              "bg-sub text-white hover:bg-sub hover:text-white",
+                          }}
                         />
                       </PopoverContent>
                     </Popover>
@@ -261,10 +265,7 @@ export default function CreateTaskPage() {
           </Form>
         </CardContent>
         <CardFooter className="flex justify-between">
-          <Button
-            variant="outline"
-            onClick={() => router.push(`/rooms/${roomId}`)}
-          >
+          <Button variant="sub" onClick={() => router.push(`/rooms/${roomId}`)}>
             キャンセル
           </Button>
           <Button type="submit" form="task-form" disabled={isSubmitting}>

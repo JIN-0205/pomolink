@@ -45,6 +45,8 @@ model User {
 
   sessions Session[]
   uploads  Upload[]
+
+  pointHistory PointHistory[]
 }
 
 // ルームモデル
@@ -226,12 +228,32 @@ model Subscription {
   stripeCurrentPeriodEnd DateTime?
   planType               PlanType  @default(FREE)
   maxRoomMembers         Int       @default(3)
-  createdAt              DateTime  @default(now())
-  updatedAt              DateTime  @updatedAt
+  historyRetentionMonths Int? // ポイント履歴保存月数（例: FREE=3, PRO=null(無制限)など）
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 enum PlanType {
   FREE
   PRO
   TEAM
+}
+
+model PointHistory {
+  id            String    @id @default(cuid())
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId        String
+  type          PointType
+  points        Int
+  reason        String?
+  relatedTaskId String?
+  createdAt     DateTime  @default(now())
+}
+
+enum PointType {
+  TASK
+  SUBMISSION
+  SESSION_BONUS
+  PLANNER_BONUS
 }

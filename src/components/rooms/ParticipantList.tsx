@@ -192,9 +192,7 @@ export function ParticipantList({
 
                 <div className="flex items-center">
                   <Badge
-                    variant={
-                      participant.role === "PLANNER" ? "default" : "outline"
-                    }
+                    variant={participant.role === "PLANNER" ? "main" : "sub"}
                     className="mr-4"
                   >
                     {participant.role === "PLANNER" ? (

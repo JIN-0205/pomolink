@@ -105,7 +105,7 @@ export function InviteCodeDisplay({
               <p className="font-mono">{inviteCode}</p>
             </div>
             <Button
-              variant="outline"
+              variant="sub"
               size="sm"
               onClick={handleReset}
               disabled={isResetting}

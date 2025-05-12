@@ -1,14 +1,43 @@
-// role.ts
+import prisma from "@/lib/db";
+import { RoomWithParticipants } from "@/types";
+
+export function getUserRole(
+  room: RoomWithParticipants | null,
+  userId: string | null
+) {
+  const participantRole =
+    room?.participants.find((p) => p.userId === userId)?.role ?? null;
+
+  const isCreator = room?.creatorId === userId;
+
+  return {
+    role: participantRole,
+    isCreator,
+    isPlanner: isCreator || participantRole === "PLANNER",
+  };
+}
 
 /**
- * 指定したuserIdのroleをparticipants配列から取得する
- * @param participants RoomParticipant[]
- * @param userId string
- * @returns "PLANNER" | "PERFORMER" | undefined
+ * 指定したroomIdのルーム情報と参加者リストを取得する
+ * @param roomId string
+ * @returns Room & { participants: Array<{ userId: string; role: "PLANNER" | "PERFORMER" }> }
  */
-export function getUserRole(
-  participants: Array<{ userId: string; role: "PLANNER" | "PERFORMER" }>,
-  userId: string
-): "PLANNER" | "PERFORMER" | undefined {
-  return participants.find((p) => p.userId === userId)?.role;
+export async function getRoomWithParticipants(roomId: string) {
+  const room = await prisma.room.findUnique({
+    where: { id: roomId },
+    include: {
+      participants: {
+        select: {
+          userId: true,
+          role: true,
+        },
+      },
+    },
+  });
+  if (!room) return null;
+  return {
+    ...room,
+    createdAt: room.createdAt.toISOString(),
+    updatedAt: room.updatedAt.toISOString(),
+  };
 }

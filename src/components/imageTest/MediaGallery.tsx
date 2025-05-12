@@ -4,7 +4,7 @@ import MediaDeleter from "@/components/imageTest/MediaDeleter";
 import storage from "@/lib/firebase";
 import { getDownloadURL, getMetadata, listAll, ref } from "firebase/storage";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 type MediaItem = {
   name: string;
@@ -29,14 +29,14 @@ export default function MediaGallery({
   mediaType = "all",
   onSelect,
   selectable = false,
-  refreshTrigger = 0,
+  // refreshTrigger = 0,
 }: MediaGalleryProps) {
   const [mediaList, setMediaList] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedMedia, setSelectedMedia] = useState<string | null>(null);
 
-  const fetchMedia = async () => {
+  const fetchMedia = useCallback(async () => {
     setLoading(true);
     setError(null);
 
@@ -119,12 +119,12 @@ export default function MediaGallery({
     } finally {
       setLoading(false);
     }
-  };
+  }, [folderPath, mediaType]);
 
   // 初期ロードとrefreshTriggerが変更された時に再取得
   useEffect(() => {
     fetchMedia();
-  }, [folderPath, mediaType, refreshTrigger]);
+  }, [fetchMedia]);
 
   const handleMediaSelect = (media: MediaItem) => {
     if (!selectable) return;

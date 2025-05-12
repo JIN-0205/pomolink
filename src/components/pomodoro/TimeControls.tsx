@@ -24,7 +24,12 @@ const TimerControls = ({
           開始
         </Button>
       ) : (
-        <Button onClick={onPause} size="lg" variant="outline">
+        <Button
+          onClick={onPause}
+          size="lg"
+          variant="sub"
+          className="font-medium"
+        >
           <Pause className="mr-2 h-4 w-4" />
           一時停止
         </Button>
@@ -33,7 +38,8 @@ const TimerControls = ({
       <Button
         onClick={onSkip}
         size="lg"
-        variant="outline"
+        variant="sub"
+        className="font-medium"
         disabled={timerState === "idle" || timerState === "completed"}
       >
         <SkipForward className="mr-2 h-4 w-4" />

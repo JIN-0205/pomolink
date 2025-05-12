@@ -1,9 +1,12 @@
 "use client";
 
+import logoIcon from "@/assets/pomolink_icon.svg";
+import logoText from "@/assets/pomolink_text.svg";
 import { cn } from "@/lib/utils";
 import { SignOutButton, useAuth, UserButton } from "@clerk/nextjs";
 import {
   Clock,
+  Coins,
   Home,
   ListTodo,
   LogOut,
@@ -13,6 +16,7 @@ import {
   Users,
   X,
 } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
@@ -40,6 +44,12 @@ export default function ProtectedLayout({
       label: "ルーム",
       icon: Users,
       active: pathname?.startsWith("/rooms"),
+    },
+    {
+      href: "/points",
+      label: "ポイント管理",
+      icon: Coins,
+      active: pathname?.startsWith("/points"),
     },
     {
       href: "/tasks",
@@ -91,11 +101,27 @@ export default function ProtectedLayout({
       </button>
 
       {/* サイドバー - デスクトップ */}
-      <div className="hidden lg:flex h-full w-72 flex-col fixed inset-y-0 z-50">
-        <div className="h-full bg-background border-r flex flex-col">
-          <div className="p-6">
-            <h1 className="text-2xl font-bold">PomoShare</h1>
-          </div>
+      <div className="hidden lg:flex h-full w-72 flex-col fixed inset-y-0 z-50 bg-red-500">
+        <div className="h-full  border-r flex flex-col bg-white">
+          <Link
+            href="/"
+            className="p-6 flex items-center justify-center relative  min-h-20 cursor-pointer"
+          >
+            <Image
+              src={logoIcon}
+              alt="PomoLink"
+              width={90}
+              height={40}
+              className="absolute top-2 left-0 "
+            />
+            <Image
+              src={logoText}
+              alt="PomoLink"
+              width={160}
+              height={40}
+              className="absolute top-9 left-14"
+            />
+          </Link>
           <div className="flex-1 flex flex-col justify-between py-4">
             <nav className="flex-1 px-4 space-y-2">
               {routes.map((route) => (
@@ -105,7 +131,7 @@ export default function ProtectedLayout({
                   className={cn(
                     "flex items-center gap-3 rounded-md py-2 px-3 text-sm font-medium",
                     route.active
-                      ? "bg-accent text-accent-foreground"
+                      ? "bg-accent text-accent-foreground "
                       : "hover:bg-accent/50"
                   )}
                 >
@@ -148,7 +174,7 @@ export default function ProtectedLayout({
       {/* サイドバー - モバイル */}
       <div
         className={cn(
-          "lg:hidden fixed inset-0 z-30 bg-background/80 backdrop-blur-sm transition-opacity",
+          "lg:hidden fixed inset-0 z-30 bg-background/80 backdrop-blur-sm transition-opacity ",
           isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
         )}
       >
@@ -158,12 +184,12 @@ export default function ProtectedLayout({
             isOpen ? "translate-x-0" : "-translate-x-full"
           )}
         >
-          <div className="h-full flex flex-col">
+          <div className="h-full flex flex-col bg-[#f9fafb] ">
             <div className="p-6">
-              <h1 className="text-2xl font-bold">PomoShare</h1>
+              <Image src={logoIcon} alt="PomoLink" width={160} height={40} />
             </div>
             <div className="flex-1 flex flex-col justify-between py-4">
-              <nav className="flex-1 px-4 space-y-2">
+              <nav className="flex-1 px-4 space-y-2 ">
                 {routes.map((route) => (
                   <Link
                     key={route.href}
