@@ -1,14 +1,17 @@
 import prisma from "@/lib/db";
+import { adminApp } from "@/lib/firebase-admin";
 import { auth } from "@clerk/nextjs/server";
+import { getFirestore } from "firebase-admin/firestore";
 import { NextRequest, NextResponse } from "next/server";
 
 // 参加者詳細取得API
 export async function GET(
   req: NextRequest,
-  { params }: { params: { roomId: string; participantId: string } }
+  { params }: { params: Promise<{ roomId: string; participantId: string }> }
 ) {
   try {
     const { userId } = await auth();
+    const { roomId, participantId } = await params;
     if (!userId) {
       return new NextResponse("認証が必要です", { status: 401 });
     }
@@ -23,7 +26,7 @@ export async function GET(
 
     // ルームを確認
     const room = await prisma.room.findUnique({
-      where: { id: params.roomId },
+      where: { id: roomId },
       include: {
         participants: true,
       },
@@ -41,7 +44,7 @@ export async function GET(
 
     // 参加者を取得
     const participant = await prisma.roomParticipant.findUnique({
-      where: { id: params.participantId },
+      where: { id: participantId },
       include: {
         user: {
           select: {
@@ -54,7 +57,7 @@ export async function GET(
       },
     });
 
-    if (!participant || participant.roomId !== params.roomId) {
+    if (!participant || participant.roomId !== roomId) {
       return new NextResponse("参加者が見つかりません", { status: 404 });
     }
 
@@ -68,10 +71,11 @@ export async function GET(
 // 参加者ロール更新API（PLANNER <-> PERFORMERの変更）
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { roomId: string; participantId: string } }
+  { params }: { params: Promise<{ roomId: string; participantId: string }> }
 ) {
   try {
     const { userId } = await auth();
+    const { roomId, participantId } = await params;
     if (!userId) {
       return new NextResponse("認証が必要です", { status: 401 });
     }
@@ -91,8 +95,9 @@ export async function PATCH(
     }
 
     // ルームを確認
+
     const room = await prisma.room.findUnique({
-      where: { id: params.roomId },
+      where: { id: roomId },
       include: {
         participants: {
           include: {
@@ -112,9 +117,7 @@ export async function PATCH(
     }
 
     // 参加者を確認
-    const participant = room.participants.find(
-      (p) => p.id === params.participantId
-    );
+    const participant = room.participants.find((p) => p.id === participantId);
     if (!participant) {
       return new NextResponse("参加者が見つかりません", { status: 404 });
     }
@@ -128,9 +131,21 @@ export async function PATCH(
 
     // 参加者のロールを更新
     const updatedParticipant = await prisma.roomParticipant.update({
-      where: { id: params.participantId },
+      where: { id: participantId },
       data: { role },
     });
+    try {
+      const firestore = getFirestore(adminApp);
+      await firestore
+        .collection("rooms")
+        .doc(roomId)
+        .collection("members")
+        .doc(participant.userId)
+        .update({ role });
+    } catch (firestoreError) {
+      console.error("[FIRESTORE_SYNC_ROLE_UPDATE]", firestoreError);
+      // Firestore同期失敗時はAPIエラーにはしない
+    }
 
     return NextResponse.json(updatedParticipant);
   } catch (error) {
@@ -142,10 +157,11 @@ export async function PATCH(
 // 参加者削除API（退室または削除）
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { roomId: string; participantId: string } }
+  { params }: { params: Promise<{ roomId: string; participantId: string }> }
 ) {
   try {
     const { userId } = await auth();
+    const { roomId, participantId } = await params;
     if (!userId) {
       return new NextResponse("認証が必要です", { status: 401 });
     }
@@ -160,7 +176,7 @@ export async function DELETE(
 
     // ルームを確認
     const room = await prisma.room.findUnique({
-      where: { id: params.roomId },
+      where: { id: roomId },
       include: {
         participants: true,
       },
@@ -172,10 +188,10 @@ export async function DELETE(
 
     // 参加者を確認
     const participant = await prisma.roomParticipant.findUnique({
-      where: { id: params.participantId },
+      where: { id: participantId },
     });
 
-    if (!participant || participant.roomId !== params.roomId) {
+    if (!participant || participant.roomId !== roomId) {
       return new NextResponse("参加者が見つかりません", { status: 404 });
     }
 
@@ -206,8 +222,22 @@ export async function DELETE(
 
     // 参加者を削除
     await prisma.roomParticipant.delete({
-      where: { id: params.participantId },
+      where: { id: participantId },
     });
+
+    // Firestoreからもmembersドキュメントを削除
+    try {
+      const firestore = getFirestore(adminApp);
+      await firestore
+        .collection("rooms")
+        .doc(roomId)
+        .collection("members")
+        .doc(participant.userId)
+        .delete();
+    } catch (firestoreError) {
+      console.error("[FIRESTORE_SYNC_DELETE]", firestoreError);
+      // Firestore同期失敗はAPIエラーにはしない
+    }
 
     return new NextResponse(null, { status: 204 });
   } catch (error) {

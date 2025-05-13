@@ -1,6 +1,6 @@
 "use client";
 
-import storage from "@/lib/firebase";
+import { storage } from "@/lib/firebase";
 import { deleteObject, ref } from "firebase/storage";
 import { useState } from "react";
 

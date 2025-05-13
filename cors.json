@@ -1,12 +1,13 @@
 [
   {
     "origin": ["https://intent-insect-jointly.ngrok-free.app"],
-    "method": ["GET", "HEAD", "OPTIONS"],
+    "method": ["GET", "HEAD", "PUT", "POST", "DELETE","OPTIONS"],
     "responseHeader": [
       "Content-Type",
       "Content-Range",
       "Access-Control-Allow-Origin",
-      "Access-Control-Allow-Credentials"
+      "Access-Control-Allow-Credentials",
+      "Authorization"
     ],
     "maxAgeSeconds": 3600
   }

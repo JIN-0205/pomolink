@@ -1,7 +1,7 @@
 "use client";
 
 import MediaDeleter from "@/components/imageTest/MediaDeleter";
-import storage from "@/lib/firebase";
+import { storage } from "@/lib/firebase";
 import { getDownloadURL, getMetadata, listAll, ref } from "firebase/storage";
 import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";

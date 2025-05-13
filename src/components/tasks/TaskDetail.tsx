@@ -24,7 +24,7 @@ import { format } from "date-fns";
 import { Clock, Play } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import useSWR from "swr";
 import { ImageUpload } from "./ImageUpload";
@@ -44,9 +44,7 @@ const fetcher = async (url: string): Promise<{ uploads: UploadType[] }> => {
 const TaskDetail = ({ task, sessions, isPlanner }: TaskDetailProps) => {
   const router = useRouter();
 
-  const [uploadDesc, setUploadDesc] = useState("");
   const [uploadLoading, setUploadLoading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedImageIndex, setSelectedImageIndex] = useState<number>(0);
   const [selectedImageGroup, setSelectedImageGroup] = useState<UploadType[]>(
@@ -61,39 +59,6 @@ const TaskDetail = ({ task, sessions, isPlanner }: TaskDetailProps) => {
     fetcher
   );
   const uploads = useMemo(() => data?.uploads ?? [], [data]);
-
-  // 画像アップロード
-  const handleImageUpload = async () => {
-    const files = fileInputRef.current?.files;
-    if (!files || files.length === 0) return;
-    setUploadLoading(true);
-    try {
-      const formData = new FormData();
-      for (let i = 0; i < files.length; i++) {
-        formData.append("file", files[i]);
-      }
-      if (uploadDesc) formData.append("description", uploadDesc);
-      const res = await fetch(`/api/tasks/${task.id}/upload`, {
-        method: "POST",
-        body: formData,
-      });
-      if (res.ok) {
-        const { uploads: newUploads } = await res.json();
-        mutate({ uploads: [...newUploads, ...uploads] }, false); // 楽観的UI
-        mutate(); // サーバーから再取得
-        if (fileInputRef.current) fileInputRef.current.value = "";
-        setUploadDesc("");
-        toast("提出物をアップロードしました");
-      } else {
-        toast("エラー", { description: "提出物のアップロードに失敗しました" });
-      }
-    } catch (e) {
-      console.error("提出物アップロードエラー:", e);
-      toast("エラー", { description: "提出物のアップロードに失敗しました" });
-    } finally {
-      setUploadLoading(false);
-    }
-  };
 
   // 日付ごとに提出物とセッションをまとめてグループ化
   const groupedByDate = useMemo(() => {
@@ -243,7 +208,17 @@ const TaskDetail = ({ task, sessions, isPlanner }: TaskDetailProps) => {
           {!isPlanner && (
             <ImageUpload
               taskId={task.id}
-              onUploadSuccess={handleImageUpload}
+              onUploadSuccess={(newUploads) => {
+                // Optimistically update uploads list
+                mutate(
+                  (current) => ({
+                    uploads: [...(current?.uploads ?? []), ...newUploads],
+                  }),
+                  false
+                );
+                // Revalidate to fetch latest data
+                mutate();
+              }}
               uploadLoading={uploadLoading}
               setUploadLoading={setUploadLoading}
             />

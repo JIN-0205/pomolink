@@ -1,6 +1,8 @@
 import prisma from "@/lib/db";
+import { adminApp } from "@/lib/firebase-admin";
 import { generateInviteCode } from "@/lib/utils";
 import { auth } from "@clerk/nextjs/server";
+import { getFirestore } from "firebase-admin/firestore";
 import { NextRequest, NextResponse } from "next/server";
 
 // ルーム作成API
@@ -47,6 +49,32 @@ export async function POST(req: NextRequest) {
         participants: true,
       },
     });
+    try {
+      const firestore = getFirestore(adminApp);
+      // ルーム情報を保存
+      await firestore.collection("rooms").doc(room.id).set({
+        name: room.name,
+        description: room.description,
+        isPrivate: room.isPrivate,
+        inviteCode: room.inviteCode,
+        creatorId: room.creatorId,
+        createdAt: new Date(),
+      });
+      // 作成者をmembersサブコレクションに追加
+      await firestore
+        .collection("rooms")
+        .doc(room.id)
+        .collection("members")
+        .doc(user.id)
+        .set({
+          userId: user.id,
+          role: "PLANNER",
+          joinedAt: new Date(),
+        });
+    } catch (firestoreError) {
+      console.error("[FIRESTORE_SYNC]", firestoreError);
+      // Firestoreへの同期失敗はAPIエラーにはしない（必要ならロギングのみ）
+    }
 
     return NextResponse.json(room);
   } catch (error) {

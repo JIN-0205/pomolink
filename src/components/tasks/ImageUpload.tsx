@@ -14,12 +14,12 @@ export interface ImageUploadProps {
   setUploadLoading: (loading: boolean) => void;
 }
 
-export const ImageUpload: React.FC<ImageUploadProps> = ({
+export const ImageUpload = ({
   taskId,
   onUploadSuccess,
   uploadLoading,
   setUploadLoading,
-}) => {
+}: ImageUploadProps) => {
   const [uploadDesc, setUploadDesc] = useState<string>("");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<{ name: string; url: string }[]>([]);

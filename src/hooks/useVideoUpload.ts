@@ -1,6 +1,9 @@
-import storage from "@/lib/firebase";
+import firebaseApp, { storage } from "@/lib/firebase";
+import { useUser } from "@clerk/nextjs";
+import { getAuth } from "firebase/auth";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { useCallback, useState } from "react";
+import { useFirebaseAuthSync } from "./useFirebaseAuthSync";
 
 interface UploadStatus {
   isUploading: boolean;
@@ -19,6 +22,9 @@ interface UseVideoUploadReturn {
  * Firebase Storageにビデオをアップロードするためのフック
  */
 export function useVideoUpload(): UseVideoUploadReturn {
+  useFirebaseAuthSync();
+
+  const { user } = useUser();
   const [uploadStatus, setUploadStatus] = useState<UploadStatus>({
     isUploading: false,
     progress: 0,
@@ -26,14 +32,17 @@ export function useVideoUpload(): UseVideoUploadReturn {
     downloadUrl: null,
   });
 
+  console.log("Clerk user.id:", user?.id);
+  console.log("Firebase Auth uid:", getAuth(firebaseApp).currentUser?.uid);
+
   /**
    * Firebase Storageにビデオをアップロード
    * @param blob ビデオBlobデータ
-   * @param path 保存先のパス（オプション）
+  //  * @param path 保存先のパス（オプション）
    * @returns ダウンロードURL
    */
   const uploadVideo = useCallback(
-    async (blob: Blob, path?: string): Promise<string> => {
+    async (blob: Blob): Promise<string> => {
       setUploadStatus({
         isUploading: true,
         progress: 0,
@@ -42,8 +51,16 @@ export function useVideoUpload(): UseVideoUploadReturn {
       });
 
       try {
+        // ClerkのuserIdを取得
+        const userId = user?.id;
+        if (!userId) {
+          throw new Error(
+            "ユーザー情報が取得できません。サインインしてください。"
+          );
+        }
         // アップロード先のパスを決定
-        const uploadPath = path || `videos/${crypto.randomUUID()}.mp4`;
+        const fileName = `${userId}-${Date.now()}.mp4`;
+        const uploadPath = `timelapse/${userId}/${fileName}`;
         const fileRef = ref(storage, uploadPath);
 
         // Firebase Storageにアップロード
@@ -75,7 +92,7 @@ export function useVideoUpload(): UseVideoUploadReturn {
         throw error;
       }
     },
-    []
+    [user]
   );
 
   /**

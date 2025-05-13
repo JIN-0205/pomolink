@@ -67,7 +67,9 @@
 // }
 
 import prisma from "@/lib/db";
+import { adminApp } from "@/lib/firebase-admin";
 import { auth } from "@clerk/nextjs/server";
+import { getFirestore } from "firebase-admin/firestore";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
@@ -184,6 +186,23 @@ async function handleJoinRoom(
       role: "PERFORMER", // デフォルトロール
     },
   });
+  // Firestoreにも同期
+  try {
+    const firestore = getFirestore(adminApp);
+    await firestore
+      .collection("rooms")
+      .doc(room.id)
+      .collection("members")
+      .doc(user.id)
+      .set({
+        userId: user.id,
+        role: "PERFORMER",
+        joinedAt: new Date(),
+      });
+  } catch (firestoreError) {
+    console.error("[FIRESTORE_SYNC]", firestoreError);
+    // Firestoreへの同期失敗はAPIエラーにはしない（必要ならロギングのみ）
+  }
 
   // 成功レスポンス
   return NextResponse.json({

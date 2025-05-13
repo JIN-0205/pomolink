@@ -72,7 +72,7 @@ export async function GET(
 // ルーム更新API
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { roomId: string } }
+  { params }: { params: Promise<{ roomId: string }> }
 ) {
   try {
     const { userId } = await auth();

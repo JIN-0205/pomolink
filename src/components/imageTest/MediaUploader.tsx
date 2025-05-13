@@ -1,10 +1,12 @@
 "use client";
 
-import storage from "@/lib/firebase";
+import { useFirebaseAuthSync } from "@/hooks/useFirebaseAuthSync";
+import firebaseApp, { storage } from "@/lib/firebase";
+import { useUser } from "@clerk/nextjs";
+import { getAuth } from "firebase/auth";
 import { getDownloadURL, ref, uploadBytesResumable } from "firebase/storage";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
-
 interface FileMetadata {
   name: string;
   size: number;
@@ -24,9 +26,11 @@ interface MediaUploaderProps {
 export default function MediaUploader({
   mediaType = "all",
   maxSizeMB = 100, // デフォルトは100MB
-  folderPath = "",
+  // folderPath = "",
   onUploadComplete,
 }: MediaUploaderProps) {
+  useFirebaseAuthSync();
+  const { user } = useUser();
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -49,12 +53,14 @@ export default function MediaUploader({
   };
 
   const getMediaFolder = (fileType: string) => {
+    const userId = user?.id;
+    if (!userId) return null;
     if (fileType.startsWith("image/")) {
-      return `${folderPath}/images`.replace(/^\//, "");
+      return `timelapse/${userId}/images`;
     } else if (fileType.startsWith("video/")) {
-      return `${folderPath}/videos`.replace(/^\//, "");
+      return `timelapse/${userId}/videos`;
     }
-    return folderPath || "media";
+    return `timelapse/${userId}/media`;
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -93,6 +99,10 @@ export default function MediaUploader({
       setError("ファイルが選択されていません");
       return;
     }
+    if (!user?.id) {
+      setError("ユーザー情報が取得できません。サインインしてください。");
+      return;
+    }
 
     setIsUploading(true);
     setProgress(0);
@@ -102,6 +112,11 @@ export default function MediaUploader({
       const timestamp = new Date().getTime();
       const fileName = `${timestamp}_${file.name}`;
       const folder = getMediaFolder(file.type);
+      if (!folder) {
+        setError("アップロード先パスの生成に失敗しました");
+        setIsUploading(false);
+        return;
+      }
       const storageRef = ref(storage, `${folder}/${fileName}`);
 
       // メタデータの設定
@@ -281,6 +296,17 @@ export default function MediaUploader({
           </p>
         </div>
       )}
+      <div
+        onClick={() => {
+          console.log("Clerk user.id:", user?.id);
+          console.log(
+            "Firebase Auth uid:",
+            getAuth(firebaseApp).currentUser?.uid
+          );
+        }}
+      >
+        hello
+      </div>
     </div>
   );
 }

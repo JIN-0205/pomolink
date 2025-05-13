@@ -1,7 +1,7 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import logoIcon from "@/assets/pomolink_icon.svg";
-import logoText from "@/assets/pomolink_text.svg";
 import { cn } from "@/lib/utils";
 import { SignOutButton, useAuth, UserButton } from "@clerk/nextjs";
 import {
@@ -107,15 +107,17 @@ export default function ProtectedLayout({
             href="/"
             className="p-6 flex items-center justify-center relative  min-h-20 cursor-pointer"
           >
-            <Image
-              src={logoIcon}
+            <img
+              src="/pomolink_icon.svg"
               alt="PomoLink"
               width={90}
               height={40}
               className="absolute top-2 left-0 "
+              style={{ height: "auto" }}
             />
-            <Image
-              src={logoText}
+
+            <img
+              src="/pomolink_text.svg"
               alt="PomoLink"
               width={160}
               height={40}
