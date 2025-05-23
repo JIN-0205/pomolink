@@ -61,7 +61,16 @@ export default function ProtectedLayout({
       href: "/media-test/webCodecs",
       label: "WebCodecs",
       icon: Clock,
-      active: pathname?.startsWith("/media-test"),
+      active: pathname?.startsWith("/media-test/webCodecs"),
+    },
+    {
+      href: "/media-test",
+      label: "Media Test",
+      icon: Clock,
+      active:
+        pathname?.startsWith("/media-test") &&
+        !pathname?.startsWith("/media-test/webCodecs") &&
+        !pathname?.startsWith("/media-test/ImageAnalyzer"),
     },
     {
       href: "/media-test/ImageAnalyzer",
@@ -70,17 +79,23 @@ export default function ProtectedLayout({
       active: pathname?.startsWith("/media-test/ImageAnalyzer"),
     },
   ];
+
   if (!isLoaded || !isSignedIn || !userId) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold">サインインしてください</h1>
+      <div className="flex items-center justify-center h-screen bg-gradient-to-br from-indigo-50 to-purple-50">
+        <div className="text-center p-8 rounded-2xl bg-white shadow-xl">
+          <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full flex items-center justify-center">
+            <Clock className="h-8 w-8 text-white" />
+          </div>
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+            サインインしてください
+          </h1>
           <p className="mt-4 text-gray-500">
-            サインインして、アプリの機能を利用してください。
+            サインインして、PomoLinkの機能を利用してください。
           </p>
           <button
             onClick={() => router.push("/sign-in")}
-            className="mt-6 bg-primary text-white px-4 py-2 rounded-md"
+            className="mt-6 bg-gradient-to-r from-indigo-500 to-purple-500 text-white px-6 py-3 rounded-lg font-medium hover:shadow-lg transition-all hover-lift"
           >
             サインイン
           </button>
@@ -90,40 +105,46 @@ export default function ProtectedLayout({
   }
 
   return (
-    <div className="h-full">
+    <div className="h-full bg-gray-50/50">
       {/* モバイルサイドバートグル */}
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="lg:hidden fixed z-40 bottom-4 right-4 bg-primary p-3 rounded-full shadow-lg"
+        className="lg:hidden fixed z-50 bottom-6 right-6 bg-gradient-to-r from-indigo-500 to-purple-500 p-4 rounded-full shadow-lg hover:shadow-xl transition-all hover-lift"
       >
-        {isOpen ? <X size={24} /> : <Menu size={24} />}
+        {isOpen ? (
+          <X size={24} className="text-white" />
+        ) : (
+          <Menu size={24} className="text-white" />
+        )}
       </button>
 
       {/* サイドバー - デスクトップ */}
-      <div className="hidden lg:flex h-full w-72 flex-col fixed inset-y-0 z-50 bg-red-500">
-        <div className="h-full  border-r flex flex-col bg-white">
+      <div className="hidden lg:flex h-full w-72 flex-col fixed inset-y-0 z-50">
+        <div className="h-full border-r bg-white shadow-sm flex flex-col">
+          {/* ロゴエリア */}
           <Link
             href="/"
-            className="p-6 flex items-center justify-center relative  min-h-20 cursor-pointer"
+            className="p-6 flex items-center justify-center relative min-h-20 cursor-pointer group"
           >
             <img
               src="/pomolink_icon.svg"
               alt="PomoLink"
-              width={90}
+              width={40}
               height={40}
-              className="absolute top-2 left-0 "
+              className="absolute top-2 left-0 group-hover:scale-110 transition-transform"
               style={{ height: "auto" }}
             />
-
             <img
               src="/pomolink_text.svg"
               alt="PomoLink"
               width={160}
               height={40}
-              className="absolute top-9 left-14"
+              className="absolute top-9 left-14 group-hover:scale-105 transition-transform"
             />
           </Link>
+
+          {/* ナビゲーション */}
           <div className="flex-1 flex flex-col justify-between py-4">
             <nav className="flex-1 px-4 space-y-2">
               {routes.map((route) => (
@@ -131,42 +152,58 @@ export default function ProtectedLayout({
                   key={route.href}
                   href={route.href}
                   className={cn(
-                    "flex items-center gap-3 rounded-md py-2 px-3 text-sm font-medium",
+                    "flex items-center gap-3 rounded-xl py-3 px-4 text-sm font-medium transition-all hover-lift",
                     route.active
-                      ? "bg-accent text-accent-foreground "
-                      : "hover:bg-accent/50"
+                      ? "bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-md"
+                      : "hover:bg-gray-100 text-gray-700 hover:text-gray-900"
                   )}
                 >
-                  <route.icon className="h-5 w-5" />
+                  <route.icon
+                    className={cn(
+                      "h-5 w-5",
+                      route.active ? "text-white" : "text-gray-500"
+                    )}
+                  />
                   {route.label}
                 </Link>
               ))}
             </nav>
-            <div className="px-4 space-y-2">
+
+            {/* プロフィールセクション */}
+            <div className="px-4 space-y-2 border-t pt-4">
               <Link
                 href="/profile"
-                className="flex items-center gap-3 rounded-md py-2 px-3 text-sm font-medium hover:bg-accent/50"
+                className="flex items-center gap-3 rounded-xl py-3 px-4 text-sm font-medium hover:bg-gray-100 text-gray-700 hover:text-gray-900 hover-lift transition-all"
               >
-                <User className="h-5 w-5" />
+                <User className="h-5 w-5 text-gray-500" />
                 プロフィール
               </Link>
               <Link
                 href="/settings"
-                className="flex items-center gap-3 rounded-md py-2 px-3 text-sm font-medium hover:bg-accent/50"
+                className="flex items-center gap-3 rounded-xl py-3 px-4 text-sm font-medium hover:bg-gray-100 text-gray-700 hover:text-gray-900 hover-lift transition-all"
               >
-                <Settings className="h-5 w-5" />
+                <Settings className="h-5 w-5 text-gray-500" />
                 設定
               </Link>
             </div>
           </div>
+
+          {/* ユーザー情報 */}
           <div className="border-t p-4">
             <div className="flex items-center justify-between">
-              <UserButton afterSignOutUrl="/" />
+              <UserButton
+                afterSignOutUrl="/"
+                appearance={{
+                  elements: {
+                    avatarBox: "w-10 h-10 hover:scale-110 transition-transform",
+                  },
+                }}
+              />
               <SignOutButton>
-                <div>
+                <button className="flex items-center text-sm text-gray-500 hover:text-gray-700 p-2 rounded-lg hover:bg-gray-100 transition-all hover-lift">
                   <LogOut className="h-4 w-4 mr-2" />
                   サインアウト
-                </div>
+                </button>
               </SignOutButton>
             </div>
           </div>
@@ -176,58 +213,76 @@ export default function ProtectedLayout({
       {/* サイドバー - モバイル */}
       <div
         className={cn(
-          "lg:hidden fixed inset-0 z-30 bg-background/80 backdrop-blur-sm transition-opacity ",
+          "lg:hidden fixed inset-0 z-30 bg-black/20 backdrop-blur-sm transition-opacity",
           isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
         )}
       >
         <div
           className={cn(
-            "fixed inset-y-0 left-0 z-40 w-72 bg-background shadow-lg transform transition-transform",
+            "fixed inset-y-0 left-0 z-40 w-72 bg-white shadow-2xl transform transition-transform",
             isOpen ? "translate-x-0" : "-translate-x-full"
           )}
         >
-          <div className="h-full flex flex-col bg-[#f9fafb] ">
-            <div className="p-6">
-              <Image src={logoIcon} alt="PomoLink" width={160} height={40} />
+          <div className="h-full flex flex-col">
+            {/* ロゴエリア */}
+            <div className="p-6 bg-gradient-to-r from-indigo-500 to-purple-500">
+              <Image
+                src={logoIcon}
+                alt="PomoLink"
+                width={160}
+                height={40}
+                className="brightness-0 invert"
+              />
             </div>
+
+            {/* ナビゲーション */}
             <div className="flex-1 flex flex-col justify-between py-4">
-              <nav className="flex-1 px-4 space-y-2 ">
+              <nav className="flex-1 px-4 space-y-2">
                 {routes.map((route) => (
                   <Link
                     key={route.href}
                     href={route.href}
                     onClick={() => setIsOpen(false)}
                     className={cn(
-                      "flex items-center gap-3 rounded-md py-2 px-3 text-sm font-medium",
+                      "flex items-center gap-3 rounded-xl py-3 px-4 text-sm font-medium transition-all",
                       route.active
-                        ? "bg-accent text-accent-foreground"
-                        : "hover:bg-accent/50"
+                        ? "bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-md"
+                        : "hover:bg-gray-100 text-gray-700 hover:text-gray-900"
                     )}
                   >
-                    <route.icon className="h-5 w-5" />
+                    <route.icon
+                      className={cn(
+                        "h-5 w-5",
+                        route.active ? "text-white" : "text-gray-500"
+                      )}
+                    />
                     {route.label}
                   </Link>
                 ))}
               </nav>
-              <div className="px-4 space-y-2">
+
+              {/* プロフィールセクション */}
+              <div className="px-4 space-y-2 border-t pt-4">
                 <Link
                   href="/profile"
                   onClick={() => setIsOpen(false)}
-                  className="flex items-center gap-3 rounded-md py-2 px-3 text-sm font-medium hover:bg-accent/50"
+                  className="flex items-center gap-3 rounded-xl py-3 px-4 text-sm font-medium hover:bg-gray-100 text-gray-700 hover:text-gray-900 transition-all"
                 >
-                  <User className="h-5 w-5" />
+                  <User className="h-5 w-5 text-gray-500" />
                   プロフィール
                 </Link>
                 <Link
                   href="/settings"
                   onClick={() => setIsOpen(false)}
-                  className="flex items-center gap-3 rounded-md py-2 px-3 text-sm font-medium hover:bg-accent/50"
+                  className="flex items-center gap-3 rounded-xl py-3 px-4 text-sm font-medium hover:bg-gray-100 text-gray-700 hover:text-gray-900 transition-all"
                 >
-                  <Settings className="h-5 w-5" />
+                  <Settings className="h-5 w-5 text-gray-500" />
                   設定
                 </Link>
               </div>
             </div>
+
+            {/* ユーザー情報 */}
             <div className="border-t p-4">
               <div className="flex items-center justify-between">
                 <UserButton afterSignOutUrl="/" />
@@ -236,7 +291,7 @@ export default function ProtectedLayout({
                     setIsOpen(false);
                     router.push("/sign-out");
                   }}
-                  className="flex items-center text-sm text-gray-500 hover:text-gray-700"
+                  className="flex items-center text-sm text-gray-500 hover:text-gray-700 p-2 rounded-lg hover:bg-gray-100 transition-all"
                 >
                   <LogOut className="h-4 w-4 mr-2" />
                   サインアウト

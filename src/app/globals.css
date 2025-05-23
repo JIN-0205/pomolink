@@ -131,5 +131,144 @@
     --color-alert: oklch(79.5% 0.184 86.047);
     --color-error: #f43f5e;
     --color-shadow: #e5e7eb;
+
+    /* ポモドーロテーマカラー */
+    --color-pomodoro: oklch(65% 0.25 15); /* トマトレッド */
+    --color-break: oklch(70% 0.2 150); /* リフレッシュグリーン */
+    --color-focus: oklch(60% 0.22 260); /* 集中ブルー */
+    --color-warning: oklch(75% 0.18 80); /* 注意オレンジ */
+
+    /* グラデーション */
+    --gradient-primary: linear-gradient(
+      135deg,
+      var(--color-main),
+      var(--color-sub)
+    );
+    --gradient-pomodoro: linear-gradient(
+      135deg,
+      var(--color-pomodoro),
+      oklch(70% 0.2 25)
+    );
+    --gradient-break: linear-gradient(
+      135deg,
+      var(--color-break),
+      oklch(75% 0.15 160)
+    );
   }
+}
+
+/* カスタムアニメーション */
+@keyframes pulse-pomodoro {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes timer-pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes progress-shine {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+@keyframes blob {
+  0% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(30px, -50px) scale(1.1);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-pulse-pomodoro {
+  animation: pulse-pomodoro 2s ease-in-out infinite;
+}
+
+.animate-timer-pulse {
+  animation: timer-pulse 1s ease-in-out infinite;
+}
+
+.animate-blob {
+  animation: blob 7s infinite;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+
+.progress-shine {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.4),
+    transparent
+  );
+  background-size: 200% 100%;
+  animation: progress-shine 2s ease-in-out infinite;
+}
+
+/* マイクロインタラクション */
+.hover-lift {
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+/* フォーカス状態の改善 */
+.focus-ring {
+  @apply focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:outline-none;
+}
+
+/* グラスモーフィズム効果 */
+.glass {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.dark .glass {
+  background: rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
