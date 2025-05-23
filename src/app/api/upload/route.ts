@@ -61,6 +61,37 @@ export async function POST(req: NextRequest) {
       });
       uploadResults.push(upload);
     }
+    // 提出ボーナス: 一日一回のみ
+    if (uploadResults.length > 0) {
+      // タスクからroomIdを取得
+      const task = await prisma.task.findUnique({
+        where: { id: taskId },
+        select: { roomId: true },
+      });
+      if (task) {
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0);
+        const existing = await prisma.pointHistory.findFirst({
+          where: {
+            userId: user.id,
+            roomId: task.roomId,
+            type: "SUBMISSION",
+            createdAt: { gte: startOfDay },
+          },
+        });
+        if (!existing) {
+          await prisma.pointHistory.create({
+            data: {
+              userId: user.id,
+              roomId: task.roomId,
+              type: "SUBMISSION",
+              points: 1,
+              reason: "提出物提出ボーナス",
+            },
+          });
+        }
+      }
+    }
     return NextResponse.json({ uploads: uploadResults });
   } catch (error) {
     console.error("[UPLOAD_POST]", error);

@@ -5,17 +5,19 @@ import { NextRequest, NextResponse } from "next/server";
 // PATCH: セッションの録画情報・完了状態を更新
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: Promise<{ sessionId: string }> }
+  context: { params: { sessionId: string } }
 ) {
+  const { sessionId } = context.params;
   try {
     const { userId: clerkId } = await auth();
     if (!clerkId) return new NextResponse("未認証", { status: 401 });
-    const { sessionId } = await params;
+
     const { recordingUrl, recordingDuration, endTime, completed } =
       await req.json();
     // セッション取得
     const session = await prisma.session.findUnique({
       where: { id: sessionId },
+      include: { task: { select: { roomId: true } } },
     });
     if (!session)
       return new NextResponse("セッションが見つかりません", { status: 404 });
@@ -35,9 +37,33 @@ export async function PATCH(
           typeof completed === "boolean" ? completed : session.completed,
       },
     });
+    // 完了状態になった場合にポイント履歴を追加
+    if (!session.completed && updated.completed) {
+      try {
+        // デフォルト1ポイントを付与
+        await prisma.pointHistory.create({
+          data: {
+            userId: session.userId,
+            roomId: session.task.roomId,
+            type: "SESSION_BONUS",
+            points: 1,
+            reason: "Pomodoro完了ボーナス",
+            relatedTaskId: session.taskId,
+          },
+        });
+      } catch (bonusError) {
+        console.error(
+          "[SESSION_PATCH_BONUS] ボーナスポイント作成エラー",
+          bonusError
+        );
+        // ポイント履歴作成エラーは全体の更新失敗としない
+      }
+    }
+
     return NextResponse.json(updated);
   } catch (error) {
     console.error("[SESSION_PATCH]", error);
-    return new NextResponse("内部エラー", { status: 500 });
+    const message = error instanceof Error ? error.message : String(error);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

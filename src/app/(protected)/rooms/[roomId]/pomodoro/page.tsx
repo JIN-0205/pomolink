@@ -207,7 +207,8 @@ export default function PomodoroPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           recordingUrl: downloadUrl,
-          recordingDuration: workDuration,
+          // recordingDuration: integer seconds
+          recordingDuration: Math.round(workDuration * 60),
           endTime: new Date().toISOString(),
           completed: true,
         }),

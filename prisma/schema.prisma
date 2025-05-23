@@ -70,7 +70,8 @@ model Room {
   tasks Task[]
 
   // ルームへの招待
-  invitations Invitation[]
+  invitations  Invitation[]
+  PointHistory PointHistory[]
 }
 
 // ルーム参加者の中間テーブル
@@ -244,6 +245,8 @@ model PointHistory {
   id            String    @id @default(cuid())
   user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId        String
+  roomId        String
+  room          Room      @relation(fields: [roomId], references: [id], onDelete: Cascade)
   type          PointType
   points        Int
   reason        String?
