@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2 } from "lucide-react";
+import { Loader2, Lock, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -65,16 +65,15 @@ export function CreateRoomForm() {
 
       const room = await response.json();
 
-      toast("ルームを作成しました", {
+      toast.success("ルームを作成しました", {
         description: `${values.name} を作成しました`,
       });
 
       router.push(`/rooms/${room.id}`);
     } catch (error) {
-      toast("エラー", {
+      toast.error("エラー", {
         description:
           error instanceof Error ? error.message : "ルームの作成に失敗しました",
-        style: { backgroundColor: "red" },
       });
     } finally {
       setIsSubmitting(false);
@@ -82,81 +81,140 @@ export function CreateRoomForm() {
   };
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <FormField
-          control={form.control}
-          name="name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>ルーム名</FormLabel>
-              <FormControl>
-                <Input placeholder="ルーム名を入力" {...field} />
-              </FormControl>
-              <FormDescription>
-                他のユーザーに表示されるルームの名前
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="description"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>説明</FormLabel>
-              <FormControl>
-                <Textarea
-                  placeholder="ルームの説明を入力（任意）"
-                  {...field}
-                  value={field.value || ""}
-                  rows={4}
-                />
-              </FormControl>
-              <FormDescription>ルームの目的や使い方を説明</FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="isPrivate"
-          render={({ field }) => (
-            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-              <div className="space-y-0.5">
-                <FormLabel className="text-base">プライベートルーム</FormLabel>
-                <FormDescription>
-                  招待されたユーザーのみがルームにアクセスできます
-                </FormDescription>
-              </div>
-              <FormControl>
-                <Switch
-                  checked={field.value}
-                  onCheckedChange={field.onChange}
-                />
-              </FormControl>
-            </FormItem>
-          )}
-        />
-
-        <div className="flex justify-end">
-          <Button
-            type="button"
-            variant="outline"
-            className="mr-2"
-            onClick={() => router.back()}
-          >
-            キャンセル
-          </Button>
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            ルームを作成
-          </Button>
+    <div className="space-y-8">
+      <div className="text-center pb-6 border-b border-gray-100">
+        <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+          <Users className="w-8 h-8 text-white" />
         </div>
-      </form>
-    </Form>
+        <h2 className="text-xl font-semibold text-gray-900">ルーム設定</h2>
+        <p className="text-sm text-gray-600 mt-1">
+          新しいポモドーロルームの詳細を設定してください
+        </p>
+      </div>
+
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-base font-medium">
+                  ルーム名 *
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="例: チーム開発ルーム"
+                    {...field}
+                    className="h-12 text-base"
+                  />
+                </FormControl>
+                <FormDescription className="text-sm">
+                  他のユーザーに表示されるルームの名前です
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="description"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-base font-medium">説明</FormLabel>
+                <FormControl>
+                  <Textarea
+                    placeholder="例: フロントエンド開発チームで使用するポモドーロルームです。集中して作業しましょう！"
+                    {...field}
+                    value={field.value || ""}
+                    rows={4}
+                    className="text-base resize-none"
+                  />
+                </FormControl>
+                <FormDescription className="text-sm">
+                  ルームの目的や使い方を説明してください（任意）
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="isPrivate"
+            render={({ field }) => (
+              <FormItem className="bg-gray-50 rounded-xl p-6">
+                <div className="flex flex-row items-start justify-between space-y-0">
+                  <div className="space-y-3 flex-1">
+                    <div className="flex items-center space-x-3">
+                      {field.value ? (
+                        <Lock className="w-5 h-5 text-orange-500" />
+                      ) : (
+                        <Users className="w-5 h-5 text-green-500" />
+                      )}
+                      <FormLabel className="text-base font-medium">
+                        {field.value
+                          ? "プライベートルーム"
+                          : "パブリックルーム"}
+                      </FormLabel>
+                    </div>
+                    <FormDescription className="text-sm leading-relaxed">
+                      {field.value ? (
+                        <>
+                          <span className="font-medium text-orange-700">
+                            プライベート設定:
+                          </span>
+                          <br />
+                          招待コードを知っているユーザーのみがルームにアクセスできます。
+                          より安全でプライベートな環境を提供します。
+                        </>
+                      ) : (
+                        <>
+                          <span className="font-medium text-green-700">
+                            パブリック設定:
+                          </span>
+                          <br />
+                          すべてのユーザーがルーム一覧からアクセスできます。
+                          オープンなコラボレーション環境を提供します。
+                        </>
+                      )}
+                    </FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      className="ml-6"
+                    />
+                  </FormControl>
+                </div>
+              </FormItem>
+            )}
+          />
+
+          <div className="flex justify-end space-x-4 pt-6 border-t border-gray-100">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => router.back()}
+              className="px-8 py-3 h-auto"
+            >
+              キャンセル
+            </Button>
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className="px-8 py-3 h-auto bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-all duration-200"
+            >
+              {isSubmitting && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              ルームを作成
+            </Button>
+          </div>
+        </form>
+      </Form>
+    </div>
   );
 }

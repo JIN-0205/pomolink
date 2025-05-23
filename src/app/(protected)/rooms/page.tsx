@@ -2,7 +2,7 @@ import { RoomList } from "@/components/rooms/RoomList";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "ルーム一覧 | PomoShare",
+  title: "ルーム一覧 | PomoLink",
   description: "参加中のルーム一覧",
 };
 

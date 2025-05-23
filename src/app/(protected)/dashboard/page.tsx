@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 interface DashboardStats {
   totalPomodoros: number;
@@ -24,6 +25,12 @@ interface DashboardStats {
   weeklyProgress: number;
   todayPomodoros: number;
   streak: number;
+}
+
+interface RecentActivity {
+  action: string;
+  room: string;
+  time: string;
 }
 
 export default function DashboardPage() {
@@ -35,19 +42,77 @@ export default function DashboardPage() {
     todayPomodoros: 0,
     streak: 0,
   });
-  // const [recentActivities, setRecentActivities] = useState([]);
+  const [recentActivities, setRecentActivities] = useState<RecentActivity[]>(
+    []
+  );
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // TODO: 実際のAPIから統計データを取得
-    setStats({
-      totalPomodoros: 156,
-      completedTasks: 23,
-      activeRooms: 3,
-      weeklyProgress: 75,
-      todayPomodoros: 4,
-      streak: 7,
-    });
+    const fetchDashboardData = async () => {
+      try {
+        setIsLoading(true);
+
+        // 統計データとアクティビティを並行して取得
+        const [statsResponse, activitiesResponse] = await Promise.all([
+          fetch("/api/dashboard/stats"),
+          fetch("/api/dashboard/activities"),
+        ]);
+
+        if (statsResponse.ok) {
+          const statsData = await statsResponse.json();
+          setStats(statsData);
+        } else {
+          throw new Error("統計データの取得に失敗しました");
+        }
+
+        if (activitiesResponse.ok) {
+          const activitiesData = await activitiesResponse.json();
+          setRecentActivities(activitiesData.activities);
+        } else {
+          console.warn("アクティビティデータの取得に失敗しました");
+          setRecentActivities([]);
+        }
+      } catch (error) {
+        console.error("ダッシュボードデータの取得エラー:", error);
+        toast("エラー", {
+          description: "ダッシュボードデータの取得に失敗しました",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDashboardData();
   }, []);
+
+  if (isLoading) {
+    return (
+      <div className="space-y-8">
+        <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+              ダッシュボード
+            </h1>
+            <p className="text-muted-foreground mt-2">データを読み込み中...</p>
+          </div>
+        </div>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i} className="animate-pulse">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <div className="h-4 bg-muted rounded w-20"></div>
+                <div className="h-4 w-4 bg-muted rounded"></div>
+              </CardHeader>
+              <CardContent>
+                <div className="h-8 bg-muted rounded w-12 mb-2"></div>
+                <div className="h-3 bg-muted rounded w-24"></div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -174,24 +239,8 @@ export default function DashboardPage() {
                 </Badge>
               </div>
               <Progress value={stats.weeklyProgress} className="h-3" />
-              <div className="grid grid-cols-7 gap-2 mt-4">
-                {["月", "火", "水", "木", "金", "土", "日"].map(
-                  (day, index) => (
-                    <div key={day} className="text-center">
-                      <div className="text-xs text-muted-foreground mb-1">
-                        {day}
-                      </div>
-                      <div
-                        className={`h-8 rounded ${
-                          index < 5 ? "bg-indigo-500" : "bg-gray-200"
-                        }`}
-                      />
-                      <div className="text-xs mt-1">
-                        {index < 5 ? "4" : "0"}
-                      </div>
-                    </div>
-                  )
-                )}
+              <div className="text-sm text-muted-foreground">
+                目標: 週30ポモドーロ
               </div>
             </div>
           </CardContent>
@@ -250,34 +299,33 @@ export default function DashboardPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {[
-              {
-                action: "ポモドーロ完了",
-                room: "プロジェクトA",
-                time: "2時間前",
-              },
-              { action: "タスク完了", room: "学習グループ", time: "4時間前" },
-              {
-                action: "新しいルームに参加",
-                room: "チーム開発",
-                time: "1日前",
-              },
-            ].map((activity, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
-              >
-                <div>
-                  <p className="font-medium">{activity.action}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {activity.room}
-                  </p>
+            {recentActivities.length > 0 ? (
+              recentActivities.map((activity, index) => (
+                <div
+                  key={index}
+                  className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
+                >
+                  <div>
+                    <p className="font-medium">{activity.action}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {activity.room}
+                    </p>
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    {activity.time}
+                  </span>
                 </div>
-                <span className="text-xs text-muted-foreground">
-                  {activity.time}
-                </span>
+              ))
+            ) : (
+              <div className="text-center py-6">
+                <p className="text-muted-foreground">
+                  まだアクティビティがありません
+                </p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  ポモドーロを開始してアクティビティを記録しましょう
+                </p>
               </div>
-            ))}
+            )}
           </div>
         </CardContent>
       </Card>
