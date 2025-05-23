@@ -34,7 +34,7 @@ const TimerControls = ({
             className={cn(
               "h-14 px-8 text-lg font-semibold shadow-lg hover-lift",
               isWorkTimer
-                ? "bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700"
+                ? "bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700"
                 : "bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"
             )}
           >
@@ -79,31 +79,6 @@ const TimerControls = ({
             リセット
           </Button>
         )}
-      </div>
-
-      {/* タイマー状態インジケーター */}
-      <div className="flex items-center gap-2">
-        <div
-          className={cn(
-            "w-3 h-3 rounded-full",
-            timerState === "running"
-              ? isWorkTimer
-                ? "bg-red-500 animate-pulse"
-                : "bg-green-500 animate-pulse"
-              : timerState === "paused"
-                ? "bg-yellow-500"
-                : "bg-gray-300"
-          )}
-        />
-        <span className="text-sm text-muted-foreground">
-          {timerState === "running"
-            ? isWorkTimer
-              ? "集中中"
-              : "休憩中"
-            : timerState === "paused"
-              ? "一時停止"
-              : "待機中"}
-        </span>
       </div>
     </div>
   );

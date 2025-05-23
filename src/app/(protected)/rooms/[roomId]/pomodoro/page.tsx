@@ -18,6 +18,7 @@ import {
 } from "@/lib/utils";
 import { Task } from "@/types";
 
+import EnhancedTimerDisplay from "@/components/pomodoro/EnhancedTimerDisplay";
 import TaskSummary from "@/components/pomodoro/TaskSummary";
 import {
   Dialog,
@@ -461,9 +462,9 @@ export default function PomodoroPage() {
   }, [timerState]);
 
   // 進捗率の計算
-  const calculateProgress = (): number => {
-    return ((totalTime - timeLeft) / totalTime) * 100;
-  };
+  // const calculateProgress = (): number => {
+  //   return ((totalTime - timeLeft) / totalTime) * 100;
+  // };
 
   return (
     <div className="container py-6 max-w-3xl">
@@ -523,28 +524,27 @@ export default function PomodoroPage() {
         )}
 
         {/* ポモドーロタイマー */}
-        <Card className="overflow-hidden">
-          <CardContent className="p-6">
-            <div className="flex flex-col items-center justify-center space-y-6">
-              <div className="text-center">
-                <h2 className="text-xl font-semibold mb-2">
-                  {timerType === "work" ? "作業時間" : "休憩時間"}
-                </h2>
-                <div className="text-6xl font-bold tabular-nums">
-                  {formatTime(timeLeft)}
-                </div>
-              </div>
+        <div className="flex flex-col items-center justify-center space-y-6">
+          {/* Enhanced Timer Display */}
+          <EnhancedTimerDisplay
+            timeLeft={timeLeft}
+            totalTime={totalTime}
+            timerType={timerType}
+            timerState={timerState}
+            currentCycle={(task?.completedPomos ?? 0) + 1}
+            totalCycles={task?.estimatedPomos ?? 4}
+            formatTime={formatTime}
+          />
 
-              <Progress value={calculateProgress()} className="w-full h-2" />
+          <TimerControls
+            timerState={timerState}
+            onStart={startTimer}
+            onPause={pauseTimer}
+            onSkip={skipTimer}
+            timerType={timerType}
+          />
 
-              <div className="flex flex-col sm:flex-row items-center gap-4"></div>
-              <TimerControls
-                timerState={timerState}
-                onStart={startTimer}
-                onPause={pauseTimer}
-                onSkip={skipTimer}
-              />
-            </div>
+          <div className="text-center space-y-2">
             <div className="text-sm text-muted-foreground">
               {timerType === "work"
                 ? "集中して作業に取り組みましょう！"
@@ -556,8 +556,8 @@ export default function PomodoroPage() {
               <span className="font-semibold">{task?.completedPomos || 0}</span>
               {task?.estimatedPomos && ` / ${task.estimatedPomos}`}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* カメラプレビュー */}
         <div className="my-6">

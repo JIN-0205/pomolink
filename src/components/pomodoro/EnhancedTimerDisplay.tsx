@@ -1,8 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
-import { Clock, Target, Zap } from "lucide-react";
+import { Target, Zap } from "lucide-react";
 
 interface EnhancedTimerDisplayProps {
   timeLeft: number;
@@ -31,9 +30,9 @@ export default function EnhancedTimerDisplay({
       className={cn(
         "relative overflow-hidden border-0 shadow-2xl transition-all duration-500",
         isWorkTimer
-          ? "bg-gradient-to-br from-red-50 via-red-100 to-red-200 dark:from-red-950/20 dark:via-red-900/30 dark:to-red-800/40"
+          ? "bg-gradient-to-br from-indigo-50 via-indigo-100 to-indigo-200 dark:from-indigo-950/20 dark:via-indigo-900/30 dark:to-indigo-800/40"
           : "bg-gradient-to-br from-green-50 via-green-100 to-green-200 dark:from-green-950/20 dark:via-green-900/30 dark:to-green-800/40",
-        timerState === "running" && "animate-timer-pulse"
+        timerState === "running" && timeLeft < 11 && "animate-timer-pulse"
       )}
     >
       {/* 背景パターン */}
@@ -49,7 +48,7 @@ export default function EnhancedTimerDisplay({
             className={cn(
               "px-4 py-2 text-sm font-semibold",
               isWorkTimer
-                ? "bg-red-100 text-red-800 border-red-200 dark:bg-red-900/50 dark:text-red-200"
+                ? "bg-indigo-100 text-indigo-800 border-indigo-200 dark:bg-indigo-900/50 dark:text-indigo-200"
                 : "bg-green-100 text-green-800 border-green-200 dark:bg-green-900/50 dark:text-green-200"
             )}
           >
@@ -98,7 +97,7 @@ export default function EnhancedTimerDisplay({
                 className={cn(
                   "transition-all duration-1000 ease-out",
                   isWorkTimer
-                    ? "text-red-500 dark:text-red-400"
+                    ? "text-indigo-500 dark:text-indigo-400"
                     : "text-green-500 dark:text-green-400"
                 )}
                 strokeLinecap="round"
@@ -111,15 +110,11 @@ export default function EnhancedTimerDisplay({
                 className={cn(
                   "text-5xl font-mono font-bold",
                   isWorkTimer
-                    ? "text-red-700 dark:text-red-300"
+                    ? "text-indigo-700 dark:text-indigo-300"
                     : "text-green-700 dark:text-green-300"
                 )}
               >
                 {formatTime(timeLeft)}
-              </div>
-              <div className="text-sm text-muted-foreground mt-2 flex items-center">
-                <Clock className="mr-1 h-3 w-3" />
-                {Math.round(progress)}% 完了
               </div>
             </div>
           </div>
@@ -135,11 +130,11 @@ export default function EnhancedTimerDisplay({
                   "w-3 h-3 rounded-full transition-all duration-300",
                   i < currentCycle - 1
                     ? isWorkTimer
-                      ? "bg-red-500"
+                      ? "bg-indigo-500"
                       : "bg-green-500"
                     : i === currentCycle - 1
                       ? isWorkTimer
-                        ? "bg-red-300 ring-2 ring-red-500"
+                        ? "bg-indigo-300 ring-2 ring-indigo-500"
                         : "bg-green-300 ring-2 ring-green-500"
                       : "bg-gray-200 dark:bg-gray-600"
                 )}
@@ -150,19 +145,6 @@ export default function EnhancedTimerDisplay({
           <div className="text-sm text-muted-foreground">
             サイクル {currentCycle} / {totalCycles}
           </div>
-        </div>
-
-        {/* 進捗バー */}
-        <div className="mt-6">
-          <Progress
-            value={progress}
-            className={cn(
-              "h-2 progress-shine",
-              isWorkTimer
-                ? "[&>div]:bg-gradient-to-r [&>div]:from-red-400 [&>div]:to-red-600"
-                : "[&>div]:bg-gradient-to-r [&>div]:from-green-400 [&>div]:to-green-600"
-            )}
-          />
         </div>
       </CardContent>
     </Card>
