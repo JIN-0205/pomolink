@@ -1,15 +1,41 @@
 "use client";
+
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { Room, User } from "@/types";
+import { Room, User } from "@/types";
 import { useUser } from "@clerk/nextjs";
+import { Plus } from "lucide-react";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 // ポイント履歴型
 interface PointHistory {
@@ -34,14 +60,6 @@ interface ApiPerformersResponse {
   performers: User[];
 }
 
-// ポイント履歴取得API
-const fetchSelfPointHistories = async (): Promise<PointHistory[]> => {
-  const res = await fetch("/api/points/self");
-  if (!res.ok) return [];
-  const data = (await res.json()) as ApiHistoriesResponse;
-  return data.histories;
-};
-
 // ルーム一覧取得API
 const fetchPlannerRooms = async (): Promise<Room[]> => {
   const res = await fetch("/api/rooms?role=PLANNER");
@@ -51,7 +69,7 @@ const fetchPlannerRooms = async (): Promise<Room[]> => {
 };
 
 // ルーム一覧取得API (パフォーマーとして所属)
-const fetchSelfRooms = async (): Promise<Room[]> => {
+const fetchPerformerRooms = async (): Promise<Room[]> => {
   const res = await fetch("/api/rooms?role=PERFORMER");
   if (!res.ok) return [];
   const data = (await res.json()) as ApiRoomItem[];
@@ -88,66 +106,60 @@ const fetchSelfHistoriesByRoom = async (
 
 const PointsPage = () => {
   const { isLoaded } = useUser();
-  const [histories, setHistories] = useState<PointHistory[]>([]);
-  const [loading, setLoading] = useState(false);
 
-  // パフォーマー管理用
-  const [rooms, setRooms] = useState<Room[]>([]);
+  // プランナーとしてのルーム管理用
+  const [plannerRooms, setPlannerRooms] = useState<Room[]>([]);
   const [roomPerformers, setRoomPerformers] = useState<Record<string, User[]>>(
     {}
   );
-  const [, setExpandedPerformer] = useState<{
-    [userId: string]: boolean;
-  }>({});
-  // const [expandedPerformer, setExpandedPerformer] = useState<{
-  //   [userId: string]: boolean;
-  // }>({});
   const [performerHistories, setPerformerHistories] = useState<{
     [userId: string]: PointHistory[];
   }>({});
   const [loadingPerformer, setLoadingPerformer] = useState<string | null>(null);
 
-  // 自分が所属するルーム (パフォーマー)
-  const [selfRooms, setSelfRooms] = useState<Room[]>([]);
-  // ルームごとの自分の履歴
-  const [selfRoomHistories, setSelfRoomHistories] = useState<
+  // パフォーマーとしてのルーム用
+  const [performerRooms, setPerformerRooms] = useState<Room[]>([]);
+  const [performerRoomHistories, setPerformerRoomHistories] = useState<
     Record<string, PointHistory[]>
   >({});
-  const [loadingSelfRoom, setLoadingSelfRoom] = useState<string | null>(null);
+  const [loadingPerformerRoom, setLoadingPerformerRoom] = useState<
+    string | null
+  >(null);
+
+  // ポイント付与ダイアログの状態
+  const [isAddPointDialogOpen, setIsAddPointDialogOpen] = useState(false);
+  const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
+  const [selectedPerformer, setSelectedPerformer] = useState<User | null>(null);
+  const [pointsToAdd, setPointsToAdd] = useState<string>("");
+  const [pointReason, setPointReason] = useState<string>("");
+  const [isAddingPoints, setIsAddingPoints] = useState(false);
 
   useEffect(() => {
     if (!isLoaded) return;
-    setLoading(true);
-    fetchSelfPointHistories().then((h) => {
-      setHistories(h);
-      setLoading(false);
-    });
-    // ルーム一覧取得
+
+    // プランナーとしてのルーム一覧を取得
     fetchPlannerRooms().then((rooms) => {
-      setRooms(rooms);
-      // Plannerとして所属するルームごとの履歴取得
-      rooms.forEach((room) => {
-        setLoadingSelfRoom(room.id);
-        fetchSelfHistoriesByRoom(room.id).then((h) => {
-          setSelfRoomHistories((prev) => ({ ...prev, [room.id]: h }));
-          setLoadingSelfRoom(null);
-        });
-      });
-      // 既存のパフォーマー管理用ルームPerformers
+      setPlannerRooms(rooms);
+      // 各ルームのパフォーマー一覧を取得
       rooms.forEach((room) => {
         fetchRoomPerformers(room.id).then((performers) => {
           setRoomPerformers((prev) => ({ ...prev, [room.id]: performers }));
         });
       });
     });
-    // Performerとして所属するルーム
-    fetchSelfRooms().then((rooms) => {
-      setSelfRooms(rooms);
+
+    // パフォーマーとしてのルーム一覧を取得
+    fetchPerformerRooms().then((rooms) => {
+      setPerformerRooms(rooms);
+      // 各ルームのポイント履歴を取得
       rooms.forEach((room) => {
-        setLoadingSelfRoom(room.id);
-        fetchSelfHistoriesByRoom(room.id).then((h) => {
-          setSelfRoomHistories((prev) => ({ ...prev, [room.id]: h }));
-          setLoadingSelfRoom(null);
+        setLoadingPerformerRoom(room.id);
+        fetchSelfHistoriesByRoom(room.id).then((histories) => {
+          setPerformerRoomHistories((prev) => ({
+            ...prev,
+            [room.id]: histories,
+          }));
+          setLoadingPerformerRoom(null);
         });
       });
     });
@@ -155,7 +167,6 @@ const PointsPage = () => {
 
   // パフォーマー名クリック時に履歴取得
   const handlePerformerClick = async (userId: string) => {
-    setExpandedPerformer((prev) => ({ ...prev, [userId]: !prev[userId] }));
     if (!performerHistories[userId]) {
       setLoadingPerformer(userId);
       const histories = await fetchUserPointHistories(userId);
@@ -164,205 +175,389 @@ const PointsPage = () => {
     }
   };
 
+  // ポイント付与処理
+  const handleAddPoints = async () => {
+    if (!selectedRoom || !selectedPerformer || !pointsToAdd) {
+      toast.error("必要な情報を入力してください");
+      return;
+    }
+
+    const points = parseInt(pointsToAdd);
+    if (isNaN(points) || points <= 0) {
+      toast.error("有効なポイント数を入力してください");
+      return;
+    }
+
+    setIsAddingPoints(true);
+    try {
+      const res = await fetch("/api/points/manual", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: selectedPerformer.id,
+          roomId: selectedRoom.id,
+          points,
+          reason: pointReason || "プランナーからのボーナスポイント",
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error("ポイント付与に失敗しました");
+      }
+
+      toast.success("ポイントを付与しました");
+
+      // ダイアログを閉じる
+      setIsAddPointDialogOpen(false);
+      setSelectedRoom(null);
+      setSelectedPerformer(null);
+      setPointsToAdd("");
+      setPointReason("");
+
+      // 該当パフォーマーの履歴を再取得
+      if (selectedPerformer) {
+        const updatedHistories = await fetchUserPointHistories(
+          selectedPerformer.id
+        );
+        setPerformerHistories((prev) => ({
+          ...prev,
+          [selectedPerformer.id]: updatedHistories,
+        }));
+      }
+    } catch (error) {
+      console.error("ポイント付与エラー:", error);
+      toast.error("ポイント付与に失敗しました");
+    } finally {
+      setIsAddingPoints(false);
+    }
+  };
+
+  // ポイント履歴タイプの日本語化
+  const formatPointType = (type: string) => {
+    switch (type) {
+      case "POMODORO_COMPLETE":
+        return "ポモドーロ完了";
+      case "SUBMISSION":
+        return "課題提出";
+      case "PLANNER_BONUS":
+        return "プランナーボーナス";
+      case "TASK":
+        return "タスク完了";
+      default:
+        return type;
+    }
+  };
+
+  // ポイント合計を計算する関数
+  const calculateTotalPoints = (histories: PointHistory[]) => {
+    return histories.reduce((sum, history) => sum + history.points, 0);
+  };
+
   return (
-    <div className="max-w-3xl mx-auto py-8 px-4">
-      <h1 className="text-2xl font-bold mb-6">ポイント管理</h1>
-      <Tabs defaultValue="self" className="w-full">
-        <TabsList className="mb-4">
-          <TabsTrigger value="self">自分のポイント</TabsTrigger>
-          <TabsTrigger value="performers">パフォーマー管理</TabsTrigger>
+    <div className="max-w-4xl mx-auto py-8 px-4">
+      <h1 className="text-3xl font-bold mb-8">ポイント管理</h1>
+
+      <Tabs defaultValue="performer" className="w-full">
+        <TabsList className="mb-6">
+          <TabsTrigger value="performer">
+            パフォーマーとしてのポイント
+          </TabsTrigger>
+          <TabsTrigger value="planner">プランナーとしての管理</TabsTrigger>
         </TabsList>
-        <TabsContent value="self">
-          <section>
-            <h2 className="text-xl font-semibold mb-2">自分のポイント</h2>
-            {/* PerformerかPlannerか判定 */}
-            {selfRooms.length > 0 ? (
+
+        {/* パフォーマーとしてのポイント表示 */}
+        <TabsContent value="performer">
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-semibold mb-2">
+                  パフォーマーとして獲得したポイント
+                </h2>
+                <p className="text-muted-foreground">
+                  参加しているルームごとのポイント獲得状況
+                </p>
+              </div>
+            </div>
+
+            {performerRooms.length > 0 ? (
               <div className="space-y-6">
-                {selfRooms.map((room) => (
+                {performerRooms.map((room) => (
                   <Card key={room.id}>
                     <CardHeader>
-                      <CardTitle>{room.name}</CardTitle>
+                      <CardTitle className="flex items-center justify-between">
+                        <span>{room.name}</span>
+                        <span className="text-lg font-bold">
+                          {performerRoomHistories[room.id]
+                            ? `${calculateTotalPoints(
+                                performerRoomHistories[room.id]
+                              )} ポイント`
+                            : "計算中..."}
+                        </span>
+                      </CardTitle>
+                      <CardDescription>{room.description}</CardDescription>
                     </CardHeader>
                     <CardContent>
-                      {loadingSelfRoom === room.id ? (
-                        <div>読み込み中...</div>
-                      ) : (
-                        <ul className="space-y-2">
-                          {selfRoomHistories[room.id]?.length === 0 ? (
-                            <li className="text-muted-foreground">
-                              ポイント履歴がありません
-                            </li>
-                          ) : (
-                            selfRoomHistories[room.id].map((h) => (
-                              <li
-                                key={h.id}
-                                className="border rounded px-3 py-2"
+                      {loadingPerformerRoom === room.id ? (
+                        <div className="text-center py-4">読み込み中...</div>
+                      ) : performerRoomHistories[room.id] &&
+                        performerRoomHistories[room.id].length > 0 ? (
+                        <div className="space-y-3">
+                          <h4 className="font-medium">最近のポイント履歴</h4>
+                          {performerRoomHistories[room.id]
+                            .slice(0, 10)
+                            .map((history) => (
+                              <div
+                                key={history.id}
+                                className="flex items-center justify-between p-3 bg-muted rounded-lg"
                               >
-                                <div className="flex justify-between items-center">
-                                  <span className="font-medium">{h.type}</span>
-                                  <span className="text-lg font-bold">
-                                    +{h.points}
-                                  </span>
+                                <div>
+                                  <p className="font-medium">
+                                    {formatPointType(history.type)}
+                                  </p>
+                                  {history.reason && (
+                                    <p className="text-sm text-muted-foreground">
+                                      {history.reason}
+                                    </p>
+                                  )}
+                                  <p className="text-xs text-muted-foreground">
+                                    {new Date(
+                                      history.createdAt
+                                    ).toLocaleDateString()}
+                                  </p>
                                 </div>
-                                {h.reason && (
-                                  <div className="text-sm text-muted-foreground">
-                                    {h.reason}
-                                  </div>
-                                )}
-                                <div className="text-xs text-gray-400">
-                                  {new Date(h.createdAt).toLocaleString()}
+                                <div className="text-lg font-bold">
+                                  +{history.points}
                                 </div>
-                              </li>
-                            ))
+                              </div>
+                            ))}
+                          {performerRoomHistories[room.id].length > 10 && (
+                            <div className="text-center text-sm text-muted-foreground">
+                              他 {performerRoomHistories[room.id].length - 10}{" "}
+                              件の履歴があります
+                            </div>
                           )}
-                        </ul>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            ) : rooms.length > 0 ? (
-              <div className="space-y-6">
-                {rooms.map((room) => (
-                  <Card key={room.id}>
-                    <CardHeader>
-                      <CardTitle>{room.name}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      {loadingSelfRoom === room.id ? (
-                        <div>読み込み中...</div>
+                        </div>
                       ) : (
-                        <ul className="space-y-2">
-                          {selfRoomHistories[room.id]?.length === 0 ? (
-                            <li className="text-muted-foreground">
-                              ポイント履歴がありません
-                            </li>
-                          ) : (
-                            selfRoomHistories[room.id].map((h) => (
-                              <li
-                                key={h.id}
-                                className="border rounded px-3 py-2"
-                              >
-                                <div className="flex justify-between items-center">
-                                  <span className="font-medium">{h.type}</span>
-                                  <span className="text-lg font-bold">
-                                    +{h.points}
-                                  </span>
-                                </div>
-                                {h.reason && (
-                                  <div className="text-sm text-muted-foreground">
-                                    {h.reason}
-                                  </div>
-                                )}
-                                <div className="text-xs text-gray-400">
-                                  {new Date(h.createdAt).toLocaleString()}
-                                </div>
-                              </li>
-                            ))
-                          )}
-                        </ul>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            ) : loading ? (
-              <div>読み込み中...</div>
-            ) : histories.length === 0 ? (
-              <div className="text-muted-foreground">
-                ポイント履歴がありません
-              </div>
-            ) : (
-              <ul className="space-y-2">
-                {histories.map((h) => (
-                  <li key={h.id} className="border rounded px-3 py-2">
-                    <div className="flex justify-between items-center">
-                      <span className="font-medium">{h.type}</span>
-                      <span className="text-lg font-bold">+{h.points}</span>
-                    </div>
-                    {h.reason && (
-                      <div className="text-sm text-muted-foreground">
-                        {h.reason}
-                      </div>
-                    )}
-                    <div className="text-xs text-gray-400">
-                      {new Date(h.createdAt).toLocaleString()}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-        </TabsContent>
-        <TabsContent value="performers">
-          <section>
-            <h2 className="text-xl font-semibold mb-4">パフォーマー管理</h2>
-            <div className="space-y-6">
-              {rooms.map((room) => (
-                <Card key={room.id}>
-                  <CardHeader>
-                    <CardTitle>{room.name}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <Accordion type="single" collapsible>
-                      {roomPerformers[room.id]?.length === 0 && (
-                        <div className="text-muted-foreground">
-                          パフォーマーがいません
+                        <div className="text-center py-8 text-muted-foreground">
+                          まだポイント履歴がありません
                         </div>
                       )}
-                      {roomPerformers[room.id]?.map((performer) => (
-                        <AccordionItem value={performer.id} key={performer.id}>
-                          <AccordionTrigger
-                            onClick={() => handlePerformerClick(performer.id)}
-                          >
-                            {performer.name || performer.email || performer.id}
-                          </AccordionTrigger>
-                          <AccordionContent>
-                            {loadingPerformer === performer.id ? (
-                              <div>読み込み中...</div>
-                            ) : performerHistories[performer.id] ? (
-                              <ul className="space-y-2">
-                                {performerHistories[performer.id].length ===
-                                0 ? (
-                                  <li className="text-muted-foreground">
-                                    ポイント履歴がありません
-                                  </li>
-                                ) : (
-                                  performerHistories[performer.id].map((h) => (
-                                    <li
-                                      key={h.id}
-                                      className="border rounded px-3 py-2"
-                                    >
-                                      <div className="flex justify-between items-center">
-                                        <span className="font-medium">
-                                          {h.type}
-                                        </span>
-                                        <span className="text-lg font-bold">
-                                          +{h.points}
-                                        </span>
-                                      </div>
-                                      {h.reason && (
-                                        <div className="text-sm text-muted-foreground">
-                                          {h.reason}
-                                        </div>
-                                      )}
-                                      <div className="text-xs text-gray-400">
-                                        {new Date(h.createdAt).toLocaleString()}
-                                      </div>
-                                    </li>
-                                  ))
-                                )}
-                              </ul>
-                            ) : null}
-                          </AccordionContent>
-                        </AccordionItem>
-                      ))}
-                    </Accordion>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <Card>
+                <CardContent className="text-center py-8">
+                  <div className="text-muted-foreground">
+                    パフォーマーとして参加しているルームがありません
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </TabsContent>
+
+        {/* プランナーとしての管理 */}
+        <TabsContent value="planner">
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-semibold mb-2">
+                  プランナーとして管理しているポイント
+                </h2>
+                <p className="text-muted-foreground">
+                  管理しているルームのパフォーマーのポイント状況とポイント付与ができます
+                </p>
+              </div>
             </div>
-          </section>
+
+            {plannerRooms.length > 0 ? (
+              <div className="space-y-6">
+                {plannerRooms.map((room) => (
+                  <Card key={room.id}>
+                    <CardHeader>
+                      <CardTitle className="flex items-center justify-between">
+                        <span>{room.name}</span>
+                        <Dialog
+                          open={isAddPointDialogOpen}
+                          onOpenChange={setIsAddPointDialogOpen}
+                        >
+                          <DialogTrigger asChild>
+                            <Button
+                              size="sm"
+                              onClick={() => setSelectedRoom(room)}
+                            >
+                              <Plus className="h-4 w-4 mr-2" />
+                              ポイント付与
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>ポイント付与</DialogTitle>
+                            </DialogHeader>
+                            <div className="space-y-4">
+                              <div>
+                                <Label>パフォーマー選択</Label>
+                                <Select
+                                  onValueChange={(value) => {
+                                    const performer = roomPerformers[
+                                      selectedRoom?.id || ""
+                                    ]?.find((p) => p.id === value);
+                                    setSelectedPerformer(performer || null);
+                                  }}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="パフォーマーを選択" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {roomPerformers[
+                                      selectedRoom?.id || ""
+                                    ]?.map((performer) => (
+                                      <SelectItem
+                                        key={performer.id}
+                                        value={performer.id}
+                                      >
+                                        {performer.name || performer.email}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div>
+                                <Label>ポイント数</Label>
+                                <Input
+                                  type="number"
+                                  min="1"
+                                  value={pointsToAdd}
+                                  onChange={(e) =>
+                                    setPointsToAdd(e.target.value)
+                                  }
+                                  placeholder="付与するポイント数"
+                                />
+                              </div>
+                              <div>
+                                <Label>理由（任意）</Label>
+                                <Input
+                                  value={pointReason}
+                                  onChange={(e) =>
+                                    setPointReason(e.target.value)
+                                  }
+                                  placeholder="ポイント付与の理由"
+                                />
+                              </div>
+                              <div className="flex justify-end space-x-2">
+                                <Button
+                                  variant="outline"
+                                  onClick={() => setIsAddPointDialogOpen(false)}
+                                >
+                                  キャンセル
+                                </Button>
+                                <Button
+                                  onClick={handleAddPoints}
+                                  disabled={isAddingPoints}
+                                >
+                                  {isAddingPoints
+                                    ? "付与中..."
+                                    : "ポイント付与"}
+                                </Button>
+                              </div>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <Accordion type="single" collapsible>
+                        {roomPerformers[room.id]?.length === 0 ? (
+                          <div className="text-center py-4 text-muted-foreground">
+                            パフォーマーがいません
+                          </div>
+                        ) : (
+                          roomPerformers[room.id]?.map((performer) => (
+                            <AccordionItem
+                              value={performer.id}
+                              key={performer.id}
+                            >
+                              <AccordionTrigger
+                                onClick={() =>
+                                  handlePerformerClick(performer.id)
+                                }
+                              >
+                                <div className="flex items-center justify-between w-full mr-4">
+                                  <span>
+                                    {performer.name || performer.email}
+                                  </span>
+                                  <span className="text-sm text-muted-foreground">
+                                    {performerHistories[performer.id]
+                                      ? `${calculateTotalPoints(
+                                          performerHistories[performer.id]
+                                        )} ポイント`
+                                      : "履歴を表示"}
+                                  </span>
+                                </div>
+                              </AccordionTrigger>
+                              <AccordionContent>
+                                {loadingPerformer === performer.id ? (
+                                  <div className="text-center py-4">
+                                    読み込み中...
+                                  </div>
+                                ) : performerHistories[performer.id] &&
+                                  performerHistories[performer.id].length >
+                                    0 ? (
+                                  <div className="space-y-2">
+                                    {performerHistories[performer.id]
+                                      .slice(0, 10)
+                                      .map((history) => (
+                                        <div
+                                          key={history.id}
+                                          className="flex items-center justify-between p-2 bg-muted rounded"
+                                        >
+                                          <div>
+                                            <p className="text-sm font-medium">
+                                              {formatPointType(history.type)}
+                                            </p>
+                                            {history.reason && (
+                                              <p className="text-xs text-muted-foreground">
+                                                {history.reason}
+                                              </p>
+                                            )}
+                                            <p className="text-xs text-muted-foreground">
+                                              {new Date(
+                                                history.createdAt
+                                              ).toLocaleDateString()}
+                                            </p>
+                                          </div>
+                                          <div className="text-sm font-bold">
+                                            +{history.points}
+                                          </div>
+                                        </div>
+                                      ))}
+                                  </div>
+                                ) : (
+                                  <div className="text-center py-4 text-muted-foreground">
+                                    ポイント履歴がありません
+                                  </div>
+                                )}
+                              </AccordionContent>
+                            </AccordionItem>
+                          ))
+                        )}
+                      </Accordion>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <Card>
+                <CardContent className="text-center py-8">
+                  <div className="text-muted-foreground">
+                    プランナーとして管理しているルームがありません
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         </TabsContent>
       </Tabs>
     </div>

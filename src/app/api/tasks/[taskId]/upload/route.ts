@@ -113,6 +113,33 @@ export async function POST(
       });
       uploadResults.push(upload);
     }
+
+    // 提出ボーナス: 一日一回のみ
+    if (uploadResults.length > 0) {
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+      const existing = await prisma.pointHistory.findFirst({
+        where: {
+          userId: user.id,
+          roomId: task.roomId,
+          type: "SUBMISSION",
+          createdAt: { gte: startOfDay },
+        },
+      });
+      if (!existing) {
+        await prisma.pointHistory.create({
+          data: {
+            userId: user.id,
+            roomId: task.roomId,
+            type: "SUBMISSION",
+            points: 1,
+            reason: "課題提出ボーナス",
+            relatedTaskId: taskId,
+          },
+        });
+      }
+    }
+
     return NextResponse.json({ uploads: uploadResults });
   } catch (error) {
     console.error("[TASK_UPLOAD_POST]", error);

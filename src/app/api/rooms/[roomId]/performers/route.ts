@@ -1,31 +1,61 @@
 import prisma from "@/lib/db";
 import { auth } from "@clerk/nextjs/server";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-// GET /api/rooms/[roomId]/performers
 export async function GET(
-  req: Request,
+  req: NextRequest,
   { params }: { params: Promise<{ roomId: string }> }
 ) {
-  const { userId } = await auth();
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  try {
+    const { userId: clerkId } = await auth();
+    if (!clerkId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { roomId } = await params;
+
+    // ユーザーの認証
+    const user = await prisma.user.findUnique({
+      where: { clerkId },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    // ルームの存在確認とユーザーの参加確認
+    const room = await prisma.room.findUnique({
+      where: { id: roomId },
+      include: {
+        participants: {
+          include: {
+            user: true,
+          },
+        },
+      },
+    });
+
+    if (!room) {
+      return NextResponse.json({ error: "Room not found" }, { status: 404 });
+    }
+
+    // ユーザーがルームに参加しているか確認
+    const isParticipant = room.participants.some(
+      (participant) => participant.userId === user.id
+    );
+
+    if (!isParticipant) {
+      return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    }
+
+    // PERFORMERロールの参加者のみを取得
+    const performers = room.participants
+      .filter((participant) => participant.role === "PERFORMER")
+      .map((participant) => participant.user);
+
+    return NextResponse.json({ performers });
+  } catch (error) {
+    console.error("[ROOM_PERFORMERS_GET]", error);
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
-
-  const roomId = (await params).roomId;
-  // ルームのパフォーマー一覧を取得
-  const performers = await prisma.roomParticipant.findMany({
-    where: {
-      roomId,
-      role: "PERFORMER",
-    },
-    include: {
-      user: true,
-    },
-  });
-
-  // User情報のみ返す
-  return NextResponse.json({
-    performers: performers.map((p) => p.user),
-  });
 }

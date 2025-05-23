@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
 }
 
 // ルーム一覧取得API
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     console.log("API route /api/rooms called"); // デバッグログを追加
 
@@ -101,13 +101,30 @@ export async function GET() {
       return new NextResponse("ユーザーが見つかりません", { status: 404 });
     }
 
-    // ユーザーが参加しているルームを取得
-    const participants = await prisma.roomParticipant.findMany({
-      where: { userId: user.id },
-      include: {
-        room: true,
-      },
-    });
+    // クエリパラメータから役割フィルターを取得
+    const url = new URL(req.url);
+    const roleFilter = url.searchParams.get("role"); // "PLANNER" または "PERFORMER"
+
+    // ユーザーが参加しているルームを取得（役割フィルター適用）
+    let participants;
+    if (roleFilter === "PLANNER" || roleFilter === "PERFORMER") {
+      participants = await prisma.roomParticipant.findMany({
+        where: {
+          userId: user.id,
+          role: roleFilter,
+        },
+        include: {
+          room: true,
+        },
+      });
+    } else {
+      participants = await prisma.roomParticipant.findMany({
+        where: { userId: user.id },
+        include: {
+          room: true,
+        },
+      });
+    }
 
     // ルームごとの参加者数を取得
     const roomsWithParticipants = await Promise.all(

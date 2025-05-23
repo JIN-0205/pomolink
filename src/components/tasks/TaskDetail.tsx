@@ -194,7 +194,7 @@ const TaskDetail = ({ task, sessions, isPlanner }: TaskDetailProps) => {
               <Button
                 onClick={startPomodoro}
                 className="w-full"
-                variant="default"
+                variant="main"
                 size="lg"
               >
                 <Play className="mr-2 h-4 w-4" />
