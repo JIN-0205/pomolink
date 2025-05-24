@@ -21,7 +21,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Session, Task, UploadType } from "@/types";
 import { format } from "date-fns";
-import { Clock, Play } from "lucide-react";
+import { Clock, Edit, Play } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -186,7 +186,26 @@ const TaskDetail = ({ task, sessions, isPlanner }: TaskDetailProps) => {
               期限:{" "}
               {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "-"}
             </div>
+            <div>作業時間: {task.workDuration || 25}分</div>
+            <div>休憩時間: {task.breakDuration || 5}分</div>
           </div>
+
+          {/* プランナー用編集ボタン */}
+          {isPlanner && (
+            <div className="pt-2">
+              <Button
+                onClick={() =>
+                  router.push(`/rooms/${task.roomId}/tasks/${task.id}/edit`)
+                }
+                variant="outline"
+                size="sm"
+                className="mr-2"
+              >
+                <Edit className="mr-2 h-4 w-4" />
+                タスクを編集
+              </Button>
+            </div>
+          )}
 
           {/* ポモドーロ開始ボタン */}
           {!isPlanner && (

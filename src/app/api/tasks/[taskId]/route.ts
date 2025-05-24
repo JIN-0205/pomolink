@@ -66,7 +66,7 @@ export async function PATCH(
   try {
     const { userId } = await auth();
     if (!userId) {
-      return new NextResponse("認証が必要です", { status: 401 });
+      return NextResponse.json({ message: "認証が必要です" }, { status: 401 });
     }
 
     const user = await prisma.user.findUnique({
@@ -74,7 +74,22 @@ export async function PATCH(
     });
 
     if (!user) {
-      return new NextResponse("ユーザーが見つかりません", { status: 404 });
+      return NextResponse.json(
+        { message: "ユーザーが見つかりません" },
+        { status: 404 }
+      );
+    }
+
+    // リクエストボディの解析
+    let requestBody;
+    try {
+      requestBody = await req.json();
+    } catch (parseError) {
+      console.error("JSON parse error:", parseError);
+      return NextResponse.json(
+        { message: "無効なJSONデータです" },
+        { status: 400 }
+      );
     }
 
     const {
@@ -85,7 +100,66 @@ export async function PATCH(
       estimatedPomos,
       completedPomos,
       dueDate,
-    } = await req.json();
+      workDuration,
+      breakDuration,
+    } = requestBody;
+
+    console.log("受信したデータ:", {
+      title,
+      description,
+      priority,
+      status,
+      estimatedPomos,
+      completedPomos,
+      dueDate,
+      workDuration,
+      breakDuration,
+    });
+
+    // 入力データのバリデーション
+    if (
+      title !== undefined &&
+      (typeof title !== "string" || title.trim() === "")
+    ) {
+      return NextResponse.json(
+        { message: "タイトルは必須です" },
+        { status: 400 }
+      );
+    }
+
+    if (
+      priority !== undefined &&
+      !["LOW", "MEDIUM", "HIGH"].includes(priority)
+    ) {
+      return NextResponse.json(
+        { message: "無効な優先度です" },
+        { status: 400 }
+      );
+    }
+
+    if (
+      workDuration !== undefined &&
+      (typeof workDuration !== "number" ||
+        workDuration < 5 ||
+        workDuration > 90)
+    ) {
+      return NextResponse.json(
+        { message: "作業時間は5分から90分の間で設定してください" },
+        { status: 400 }
+      );
+    }
+
+    if (
+      breakDuration !== undefined &&
+      (typeof breakDuration !== "number" ||
+        breakDuration < 1 ||
+        breakDuration > 30)
+    ) {
+      return NextResponse.json(
+        { message: "休憩時間は1分から30分の間で設定してください" },
+        { status: 400 }
+      );
+    }
 
     // タスクを取得
     const { taskId } = await params;
@@ -101,7 +175,10 @@ export async function PATCH(
     });
 
     if (!task) {
-      return new NextResponse("タスクが見つかりません", { status: 404 });
+      return NextResponse.json(
+        { message: "タスクが見つかりません" },
+        { status: 404 }
+      );
     }
 
     // ユーザーの参加情報を取得
@@ -110,7 +187,10 @@ export async function PATCH(
     );
 
     if (!participant) {
-      return new NextResponse("アクセス権限がありません", { status: 403 });
+      return NextResponse.json(
+        { message: "アクセス権限がありません" },
+        { status: 403 }
+      );
     }
 
     // PLANNERはすべての変更が可能、PERFORMERはステータスとcompletedPomosのみ変更可能
@@ -120,36 +200,70 @@ export async function PATCH(
         description !== undefined ||
         priority !== undefined ||
         estimatedPomos !== undefined ||
-        dueDate !== undefined)
+        dueDate !== undefined ||
+        workDuration !== undefined ||
+        breakDuration !== undefined)
     ) {
-      return new NextResponse("タスクの更新権限がありません", { status: 403 });
+      return NextResponse.json(
+        { message: "タスクの更新権限がありません" },
+        { status: 403 }
+      );
     }
 
-    // タスクを更新
+    // 型安全な更新データを構築
+    const updateData: Record<string, unknown> = {};
+
+    if (title !== undefined) updateData.title = title.trim();
+    if (description !== undefined)
+      updateData.description = description?.trim() || null;
+    if (priority !== undefined) updateData.priority = priority;
+    if (status !== undefined) updateData.status = status;
+    if (estimatedPomos !== undefined)
+      updateData.estimatedPomos = estimatedPomos;
+    if (completedPomos !== undefined)
+      updateData.completedPomos = completedPomos;
+    if (dueDate !== undefined) {
+      updateData.dueDate = dueDate ? new Date(dueDate) : null;
+    }
+    if (workDuration !== undefined) updateData.workDuration = workDuration;
+    if (breakDuration !== undefined) updateData.breakDuration = breakDuration;
+
+    console.log("更新データ:", updateData);
+
     const updatedTask = await prisma.task.update({
       where: { id: taskId },
-      data: {
-        title: title !== undefined ? title : undefined,
-        description: description !== undefined ? description : undefined,
-        priority: priority !== undefined ? priority : undefined,
-        status: status !== undefined ? status : undefined,
-        estimatedPomos:
-          estimatedPomos !== undefined ? estimatedPomos : undefined,
-        completedPomos:
-          completedPomos !== undefined ? completedPomos : undefined,
-        dueDate:
-          dueDate !== undefined
-            ? dueDate
-              ? new Date(dueDate)
-              : null
-            : undefined,
-      },
+      data: updateData as Parameters<typeof prisma.task.update>[0]["data"],
     });
+
+    console.log("更新成功:", updatedTask);
 
     return NextResponse.json(updatedTask);
   } catch (error) {
-    console.error("[TASK_PATCH]", error);
-    return new NextResponse("内部エラー", { status: 500 });
+    console.error("[TASK_PATCH] エラー詳細:", error);
+
+    // Prismaエラーの詳細な処理
+    if (error && typeof error === "object" && "code" in error) {
+      const prismaError = error as { code: string; message: string };
+      if (prismaError.code === "P2002") {
+        return NextResponse.json(
+          { message: "データの競合が発生しました" },
+          { status: 409 }
+        );
+      }
+      if (prismaError.code === "P2025") {
+        return NextResponse.json(
+          { message: "更新対象のタスクが見つかりません" },
+          { status: 404 }
+        );
+      }
+    }
+
+    return NextResponse.json(
+      {
+        message: `内部エラー: ${error instanceof Error ? error.message : "不明なエラー"}`,
+      },
+      { status: 500 }
+    );
   }
 }
 

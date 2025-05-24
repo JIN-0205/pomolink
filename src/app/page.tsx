@@ -23,6 +23,7 @@ import {
   Users,
   Zap,
 } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -38,13 +39,27 @@ export default function LandingPage() {
       {/* ナビゲーションバー */}
       <header className="border-b border-border/50 bg-white/80 backdrop-blur-lg sticky top-0 z-50">
         <div className="container mx-auto flex h-16 items-center px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center">
-            <div className="w-8 h-8 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-lg flex items-center justify-center mr-3">
+          <div className="flex items-center space-x-3">
+            {/* <div className="w-8 h-8 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-lg flex items-center justify-center mr-3">
               <Clock className="h-5 w-5 text-white" />
-            </div>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+            </div> */}
+            {/* <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
               PomoLink
-            </h1>
+            </h1> */}
+            <Image
+              src="/icon_trimmed.png"
+              alt="PomoLink"
+              width={40}
+              height={40}
+              className="transition-transform"
+            />
+            <Image
+              src="/pomolink_text_trimmed.png"
+              alt="PomoLink"
+              width={140}
+              height={40}
+              className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent"
+            />
           </div>
           <div className="ml-auto flex space-x-4">
             <Link

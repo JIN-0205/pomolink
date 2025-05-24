@@ -180,6 +180,8 @@ model Task {
   priority       Priority   @default(MEDIUM)
   estimatedPomos Int?
   completedPomos Int        @default(0)
+  workDuration   Int?       @default(25) // ポモドーロ作業時間（分）
+  breakDuration  Int?       @default(5) // ポモドーロ休憩時間（分）
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
   dueDate        DateTime?

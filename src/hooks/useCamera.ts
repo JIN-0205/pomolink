@@ -4,6 +4,7 @@ interface UseCameraOptions {
   width?: number;
   height?: number;
   frameRate?: number;
+  enabled?: boolean; // カメラの有効/無効を制御
 }
 
 interface UseCameraReturn {
@@ -17,7 +18,7 @@ interface UseCameraReturn {
  * カメラからの映像ストリームを取得・制御するフック
  */
 export function useCamera(options: UseCameraOptions = {}): UseCameraReturn {
-  const { width = 640, height = 360, frameRate = 10 } = options;
+  const { width = 640, height = 360, frameRate = 10, enabled = true } = options;
 
   const videoRef = useRef<HTMLVideoElement>(
     null
@@ -26,12 +27,32 @@ export function useCamera(options: UseCameraOptions = {}): UseCameraReturn {
   const [error, setError] = useState<string | null>(null);
   const [isReady, setIsReady] = useState(false);
 
+  // カメラが無効になった時の専用クリーンアップ
   useEffect(() => {
+    if (!enabled && stream) {
+      console.log("カメラを無効化中...");
+      stream.getTracks().forEach((track) => track.stop());
+      setStream(null);
+      setIsReady(false);
+      setError(null);
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+      }
+    }
+  }, [enabled, stream]);
+
+  // カメラが有効になった時の専用セットアップ
+  useEffect(() => {
+    if (!enabled) return;
+
     let mounted = true;
-    let mediaStream: MediaStream;
+    let mediaStream: MediaStream | null = null;
 
     async function setupCamera() {
       try {
+        console.log("カメラを起動中...");
+        setError(null);
+
         // カメラストリームを取得
         mediaStream = await navigator.mediaDevices.getUserMedia({
           video: {
@@ -42,7 +63,7 @@ export function useCamera(options: UseCameraOptions = {}): UseCameraReturn {
           audio: false,
         });
 
-        if (!mounted) {
+        if (!mounted || !enabled) {
           mediaStream.getTracks().forEach((track) => track.stop());
           return;
         }
@@ -53,8 +74,14 @@ export function useCamera(options: UseCameraOptions = {}): UseCameraReturn {
         // ビデオ要素にストリームをセット
         if (videoRef.current) {
           videoRef.current.srcObject = mediaStream;
-          await videoRef.current.play();
-          setIsReady(true);
+          try {
+            await videoRef.current.play();
+            setIsReady(true);
+            console.log("カメラが正常に起動しました");
+          } catch (playError) {
+            console.error("ビデオ再生エラー:", playError);
+            setError("ビデオの再生に失敗しました");
+          }
         }
       } catch (err: unknown) {
         console.error("カメラアクセスエラー:", err);
@@ -63,6 +90,7 @@ export function useCamera(options: UseCameraOptions = {}): UseCameraReturn {
             ? err.message
             : "カメラへのアクセスに失敗しました"
         );
+        setIsReady(false);
       }
     }
 
@@ -71,11 +99,12 @@ export function useCamera(options: UseCameraOptions = {}): UseCameraReturn {
     // クリーンアップ関数
     return () => {
       mounted = false;
-      if (mediaStream) {
+      if (mediaStream && mediaStream.active) {
+        console.log("カメラストリームをクリーンアップ中...");
         mediaStream.getTracks().forEach((track) => track.stop());
       }
     };
-  }, [width, height, frameRate]);
+  }, [enabled, width, height, frameRate]);
 
   return {
     videoRef,

@@ -7,7 +7,6 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 
 import TimerControls from "@/components/pomodoro/TimeControls";
@@ -49,19 +48,29 @@ export default function PomodoroPage() {
   const [isLoading, setIsLoading] = useState(!!taskId);
   const [timerType, setTimerType] = useState<TimerType>("work");
   const [timerState, setTimerState] = useState<TimerState>("idle");
-  const [workDuration, setWorkDuration] = useState(0.2); // 作業時間（分）
-  const [breakDuration, setBreakDuration] = useState(1); // 休憩時間（分）
+
+  // ポモドーロテクニックの標準時間に固定
+  const workDuration = task?.workDuration || 25; // タスクの設定値を使用、デフォルトは25分
+  const breakDuration = task?.breakDuration || 5; // タスクの設定値を使用、デフォルトは5分
+
   const [timeLeft, setTimeLeft] = useState(workDuration * 60); // 初期値を作業時間に設定
   const [totalTime, setTotalTime] = useState(workDuration * 60);
   const [timerEndTime, setTimerEndTime] = useState<number | null>(null);
   const [sessionId, setSessionId] = useState<string | undefined>(undefined);
+
+  // カメラのオンオフ状態を追加
+  const [isCameraEnabled, setIsCameraEnabled] = useState(true);
 
   // --- 録画・エンコード・アップロード用フック ---
   const {
     videoRef,
     error: cameraError,
     // isReady,
-  } = useCamera({ width: 640, height: 360 });
+  } = useCamera({
+    width: 640,
+    height: 360,
+    enabled: isCameraEnabled, // カメラの有効/無効を制御
+  });
   const {
     frames,
     isRecording,
@@ -113,7 +122,7 @@ export default function PomodoroPage() {
     fetchTaskDetails();
   }, [taskId]);
 
-  // タイマー設定を変更したときに時間を更新
+  // タイマー設定を変更したときに時間を更新（idleの時のみ）
   useEffect(() => {
     if (timerState === "idle") {
       if (timerType === "work") {
@@ -126,7 +135,8 @@ export default function PomodoroPage() {
         setTimerEndTime(null);
       }
     }
-  }, [workDuration, breakDuration, timerType, timerState]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workDuration, breakDuration, timerType]); // timerStateは意図的に除外（一時停止・再開でリセットを防ぐため）
 
   // タイマーの開始
   const startTimer = async () => {
@@ -134,6 +144,7 @@ export default function PomodoroPage() {
 
     console.log("startTimer 呼び出し");
 
+    // 新規開始の場合のみセッション作成と録画開始を行う
     if (timerState === "idle" && timerType === "work") {
       if (taskId) {
         try {
@@ -157,25 +168,31 @@ export default function PomodoroPage() {
         }
       }
 
-      // 録画に必要な初期化
-      console.log("録画開始準備");
-      clearFrames(); // 前回のフレームをクリア
-      setEncodedBlob(null);
-      setPreviewUrl(null);
-      resetStatus();
-      resetUploadStatus();
+      // カメラが有効な場合のみ録画を開始（新規開始時のみ）
+      if (isCameraEnabled) {
+        console.log("録画開始準備");
+        clearFrames(); // 前回のフレームをクリア
+        setEncodedBlob(null);
+        setPreviewUrl(null);
+        resetStatus();
+        resetUploadStatus();
 
-      // タイマー状態を変更する前に録画を開始
-      startRecording();
-      console.log("startRecording 呼び出し完了");
+        // タイマー状態を変更する前に録画を開始
+        startRecording();
+        console.log("startRecording 呼び出し完了");
+      } else {
+        console.log("カメラがオフのため録画をスキップ");
+      }
     }
 
     // タイマー状態を変更（録画開始の後に行う）
     console.log("タイマー状態を running に設定");
+
     // 終了予定時刻をセット
-    const durationSec =
-      timerType === "work" ? workDuration * 60 : breakDuration * 60;
-    setTimerEndTime(Date.now() + durationSec * 1000);
+    // 一時停止からの再開の場合は、現在の timeLeft を使用
+    // 新規開始の場合は、フル時間を使用
+    const durationMs = timeLeft * 1000; // 現在の残り時間をミリ秒に変換
+    setTimerEndTime(Date.now() + durationMs);
     setTimerState("running");
   };
 
@@ -269,10 +286,66 @@ export default function PomodoroPage() {
   const handleTimerCompleted = useCallback(async () => {
     setTimerEndTime(null); // 完了時もクリア
     if (timerType === "work") {
-      // 録画停止
-      stopRecording();
+      // カメラが有効な場合のみ録画停止と動画処理
+      if (isCameraEnabled) {
+        // 録画停止
+        stopRecording();
 
-      // 通知とタイマー状態更新（早めに更新）
+        // 最後のフレームを確実にキャプチャ
+        if (videoRef.current) {
+          captureFrame(videoRef.current);
+        }
+
+        // 少し待ってからフレームの状況を確認
+        await new Promise((resolve) => setTimeout(resolve, 500));
+
+        console.log(`キャプチャしたフレーム: ${frames.length}枚`);
+
+        // フレームがある場合のみエンコード
+        if (frames.length > 0) {
+          try {
+            const blob = await encodeFrames(frames, {
+              width: 640,
+              height: 360,
+              fps: 30,
+              bitrate: 1_000_000,
+              keyFrameInterval: 30,
+              chunkSize: 500,
+            });
+            setEncodedBlob(blob);
+            const url = URL.createObjectURL(blob);
+            setPreviewUrl(url);
+            setShowVideoConfirm(true);
+          } catch (e) {
+            console.error("自動エンコード失敗:", e);
+            toast("エラー", { description: "動画のエンコードに失敗しました" });
+          }
+        } else {
+          console.warn("エンコード可能なフレームがありません");
+          toast("警告", {
+            description: "録画フレームがないため、動画は生成されませんでした",
+          });
+        }
+      } else {
+        // カメラがオフの場合は直接セッション完了処理
+        if (sessionId) {
+          try {
+            await fetch(`/api/pomodoro/sessions/${sessionId}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                endTime: new Date().toISOString(),
+                completed: true,
+                recordingDuration: Math.round(workDuration * 60), // 実際の作業時間
+              }),
+            });
+          } catch (error) {
+            console.error("セッション更新エラー:", error);
+          }
+        }
+      }
+
+      // 通知とタイマー状態更新
       sendNotification("ポモドーロ完了", {
         body: "お疲れさまでした！休憩時間です。",
         icon: "/favicon.ico",
@@ -285,41 +358,7 @@ export default function PomodoroPage() {
       setTotalTime(breakDuration * 60);
       setTimerState("idle");
 
-      // 最後のフレームを確実にキャプチャ
-      if (videoRef.current) {
-        captureFrame(videoRef.current);
-      }
-
-      // 少し待ってからフレームの状況を確認
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      console.log(`キャプチャしたフレーム: ${frames.length}枚`);
-
-      // フレームがある場合のみエンコード
-      if (frames.length > 0) {
-        try {
-          const blob = await encodeFrames(frames, {
-            width: 640,
-            height: 360,
-            fps: 30,
-            bitrate: 1_000_000,
-            keyFrameInterval: 30,
-            chunkSize: 500,
-          });
-          setEncodedBlob(blob);
-          const url = URL.createObjectURL(blob);
-          setPreviewUrl(url);
-          setShowVideoConfirm(true);
-        } catch (e) {
-          console.error("自動エンコード失敗:", e);
-          toast("エラー", { description: "動画のエンコードに失敗しました" });
-        }
-      } else {
-        console.warn("エンコード可能なフレームがありません");
-        toast("警告", {
-          description: "録画フレームがないため、動画は生成されませんでした",
-        });
-      }
+      // タスクの完了ポモ数を更新
       if (task && taskId) {
         try {
           const res = await fetch(`/api/tasks/${taskId}`, {
@@ -357,6 +396,7 @@ export default function PomodoroPage() {
     timerType,
     workDuration,
     breakDuration,
+    isCameraEnabled,
     stopRecording,
     frames,
     encodeFrames,
@@ -364,6 +404,7 @@ export default function PomodoroPage() {
     captureFrame,
     task,
     taskId,
+    sessionId,
   ]);
 
   // タスクのステータスを更新する
@@ -424,8 +465,13 @@ export default function PomodoroPage() {
 
   // タイマー実行中に定期的にフレームをキャプチャするための効果
   useEffect(() => {
-    // タイマーが実行中かつ録画中の場合のみフレームをキャプチャする
-    if (timerState === "running" && isRecording && videoRef.current) {
+    // タイマーが実行中かつ録画中かつカメラが有効な場合のみフレームをキャプチャする
+    if (
+      timerState === "running" &&
+      isRecording &&
+      isCameraEnabled &&
+      videoRef.current
+    ) {
       console.log("タイマー実行中のフレームキャプチャを開始します");
 
       // 3秒ごとにフレームをキャプチャする
@@ -444,7 +490,7 @@ export default function PomodoroPage() {
         clearInterval(captureIntervalId);
       };
     }
-  }, [timerState, isRecording, videoRef, captureFrame]);
+  }, [timerState, isRecording, isCameraEnabled, videoRef, captureFrame]);
 
   // ページ離脱時の確認
   useEffect(() => {
@@ -482,46 +528,30 @@ export default function PomodoroPage() {
         {/* タスク情報表示 - タスクがある場合のみ表示 */}
         {!isLoading && task && <TaskSummary task={task} />}
 
-        {timerState === "idle" && (
-          <Card className="overflow-hidden">
-            <CardContent className="p-6">
-              <h2 className="text-lg font-semibold mb-4">タイマー設定</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="workDuration" className="text-sm font-medium">
-                    作業時間（分）
-                  </label>
-                  <Input
-                    id="workDuration"
-                    type="number"
-                    min="1"
-                    max="60"
-                    value={workDuration}
-                    onChange={(e) => setWorkDuration(Number(e.target.value))}
-                    className="mt-1"
-                  />
+        {/* ポモドーロ設定情報（固定値を表示） */}
+        <Card className="overflow-hidden">
+          <CardContent className="p-6">
+            <h2 className="text-lg font-semibold mb-4">ポモドーロ設定</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-center">
+              <div className="p-4 bg-blue-50 rounded-lg">
+                <div className="text-2xl font-bold text-blue-600">
+                  {workDuration}分
                 </div>
-                <div>
-                  <label
-                    htmlFor="breakDuration"
-                    className="text-sm font-medium"
-                  >
-                    休憩時間（分）
-                  </label>
-                  <Input
-                    id="breakDuration"
-                    type="number"
-                    min="1"
-                    max="30"
-                    value={breakDuration}
-                    onChange={(e) => setBreakDuration(Number(e.target.value))}
-                    className="mt-1"
-                  />
-                </div>
+                <div className="text-sm text-blue-800">作業時間</div>
               </div>
-            </CardContent>
-          </Card>
-        )}
+              <div className="p-4 bg-green-50 rounded-lg">
+                <div className="text-2xl font-bold text-green-600">
+                  {breakDuration}分
+                </div>
+                <div className="text-sm text-green-800">休憩時間</div>
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground mt-4 text-center">
+              ⚡
+              時間設定は公平性のため固定されています（ポモドーロテクニック標準）
+            </p>
+          </CardContent>
+        </Card>
 
         {/* ポモドーロタイマー */}
         <div className="flex flex-col items-center justify-center space-y-6">
@@ -560,20 +590,56 @@ export default function PomodoroPage() {
         </div>
 
         {/* カメラプレビュー */}
-        <div className="my-6">
-          <h3 className="font-bold mb-2">カメラプレビュー</h3>
-          <video
-            ref={videoRef}
-            width={320}
-            height={180}
-            autoPlay
-            muted
-            className="rounded bg-black"
-          />
-          <canvas ref={canvasRef} style={{ display: "none" }} />
-          {cameraError && <p className="text-red-500">{cameraError}</p>}
-          {isRecording && <p className="text-red-500">録画中...</p>}
-        </div>
+        <Card className="overflow-hidden">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold">カメラ設定</h3>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">カメラ</span>
+                <Button
+                  variant={isCameraEnabled ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setIsCameraEnabled(!isCameraEnabled)}
+                  className="px-3 py-1"
+                >
+                  {isCameraEnabled ? "ON" : "OFF"}
+                </Button>
+              </div>
+            </div>
+
+            {isCameraEnabled ? (
+              <div>
+                <video
+                  ref={videoRef}
+                  width={320}
+                  height={180}
+                  autoPlay
+                  muted
+                  className="rounded bg-black mx-auto block"
+                />
+                <canvas ref={canvasRef} style={{ display: "none" }} />
+                {cameraError && (
+                  <p className="text-red-500 text-sm mt-2 text-center">
+                    {cameraError}
+                  </p>
+                )}
+                {isRecording && (
+                  <p className="text-red-500 text-sm mt-2 text-center">
+                    📹 録画中...
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="bg-gray-100 rounded flex items-center justify-center h-[180px] w-[320px] mx-auto">
+                <div className="text-center text-gray-500">
+                  <div className="text-4xl mb-2">📹</div>
+                  <div className="text-sm">カメラがオフです</div>
+                  <div className="text-xs">録画は行われません</div>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* タイマー終了後の動画確認・保存UI */}
         <Dialog

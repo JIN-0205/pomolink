@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import logoIcon from "@/assets/pomolink_icon.svg";
+// import logoIcon from "@/assets/pomolink_icon.svg";
 import { cn } from "@/lib/utils";
 import { SignOutButton, useAuth, UserButton } from "@clerk/nextjs";
 import {
@@ -125,22 +125,21 @@ export default function ProtectedLayout({
           {/* ロゴエリア */}
           <Link
             href="/"
-            className="p-6 flex items-center justify-center relative min-h-20 cursor-pointer group"
+            className="p-6 flex items-center justify-center relative min-h-20 cursor-pointer group hover:scale-110  transition-transform"
           >
-            <img
-              src="/pomolink_icon.svg"
+            <Image
+              src="/icon_trimmed.png"
               alt="PomoLink"
               width={40}
               height={40}
-              className="absolute top-2 left-0 group-hover:scale-110 transition-transform"
-              style={{ height: "auto" }}
+              className="absolute left-6  transition-transform"
             />
-            <img
-              src="/pomolink_text.svg"
+            <Image
+              src="/pomolink_text_trimmed.png"
               alt="PomoLink"
-              width={160}
+              width={140}
               height={40}
-              className="absolute top-9 left-14 group-hover:scale-105 transition-transform"
+              className="absolute top-9 left-18  transition-transform"
             />
           </Link>
 
@@ -225,11 +224,12 @@ export default function ProtectedLayout({
         >
           <div className="h-full flex flex-col">
             {/* ロゴエリア */}
-            <div className="p-6 bg-gradient-to-r from-indigo-500 to-purple-500">
+            <div className="p-6  bg-gradient-to-r from-indigo-500 to-purple-500">
               <Image
-                src={logoIcon}
+                // src={logoIcon}
+                src="/icon_trimmed.png"
                 alt="PomoLink"
-                width={160}
+                width={40}
                 height={40}
                 className="brightness-0 invert"
               />

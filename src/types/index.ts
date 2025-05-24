@@ -44,6 +44,8 @@ export type Task = {
   priority: "LOW" | "MEDIUM" | "HIGH";
   estimatedPomos?: number | null;
   completedPomos: number;
+  workDuration?: number | null; // ポモドーロ作業時間（分）
+  breakDuration?: number | null; // ポモドーロ休憩時間（分）
   dueDate: string | null;
   roomId: string;
   createdAt: string;

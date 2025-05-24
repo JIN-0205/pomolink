@@ -13,17 +13,45 @@ export default function AuthLayout({
           <Link href="/" className="group">
             <div className="flex items-center space-x-3 transition-transform group-hover:scale-105">
               <Image
-                src="/pomolink_icon.svg"
+                // src="/pomolink_icon.svg"
+                src="/icon_trimmed.png"
                 alt="PomoLink"
-                width={48}
-                height={48}
+                width={36}
+                height={36}
                 className="w-12 h-12"
               />
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              {/* <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                 PomoLink
-              </h1>
+              </h1> */}
+              <Image
+                src="/pomolink_text_trimmed.png"
+                alt="PomoLink"
+                width={140}
+                height={40}
+                className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent"
+              />
             </div>
           </Link>
+          {/* <Link
+            href="/"
+            className="p-6 flex items-center justify-center relative min-h-20 cursor-pointer group hover:scale-110  transition-transform"
+          >
+            <Image
+              src="/icon_trimmed.png"
+              alt="PomoLink"
+              width={40}
+              height={40}
+              className="absolute left-6  transition-transform"
+            />
+            <Image
+              src="/pomolink_text_trimmed.png"
+              alt="PomoLink"
+              width={140}
+              height={40}
+              className="absolute top-9 left-18  transition-transform"
+            />
+          </Link> */}
+
           <p className="text-center text-sm text-gray-600 max-w-sm">
             集中力を高め、目標を達成するためのポモドーロタイマーアプリ
           </p>
