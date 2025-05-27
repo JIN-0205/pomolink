@@ -233,6 +233,13 @@ export default function ProtectedLayout({
                 height={40}
                 className="brightness-0 invert"
               />
+              <Image
+                src="/pomolink_text_trimmed.png"
+                alt="PomoLink"
+                width={140}
+                height={40}
+                className="brightness-0 invert absolute top-9 left-18  transition-transform"
+              />
             </div>
 
             {/* ナビゲーション */}

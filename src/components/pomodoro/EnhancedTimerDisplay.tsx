@@ -28,7 +28,7 @@ export default function EnhancedTimerDisplay({
   return (
     <Card
       className={cn(
-        "relative overflow-hidden border-0 shadow-2xl transition-all duration-500",
+        "relative overflow-hidden border-0 shadow-2xl transition-all duration-500 w-full",
         isWorkTimer
           ? "bg-gradient-to-br from-indigo-50 via-indigo-100 to-indigo-200 dark:from-indigo-950/20 dark:via-indigo-900/30 dark:to-indigo-800/40"
           : "bg-gradient-to-br from-green-50 via-green-100 to-green-200 dark:from-green-950/20 dark:via-green-900/30 dark:to-green-800/40",
@@ -40,13 +40,13 @@ export default function EnhancedTimerDisplay({
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent transform -skew-x-12 translate-x-full animate-[shimmer_3s_infinite]" />
       </div>
 
-      <CardContent className="relative p-8 text-center">
+      <CardContent className="relative p-4 sm:p-6 lg:p-8 text-center">
         {/* タイマータイプバッジ */}
-        <div className="flex justify-center mb-6">
+        <div className="flex justify-center mb-4 sm:mb-6">
           <Badge
             variant="secondary"
             className={cn(
-              "px-4 py-2 text-sm font-semibold",
+              "px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-semibold",
               isWorkTimer
                 ? "bg-indigo-100 text-indigo-800 border-indigo-200 dark:bg-indigo-900/50 dark:text-indigo-200"
                 : "bg-green-100 text-green-800 border-green-200 dark:bg-green-900/50 dark:text-green-200"
@@ -54,12 +54,12 @@ export default function EnhancedTimerDisplay({
           >
             {isWorkTimer ? (
               <>
-                <Zap className="mr-2 h-4 w-4" />
+                <Zap className="mr-1.5 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
                 集中時間
               </>
             ) : (
               <>
-                <Target className="mr-2 h-4 w-4" />
+                <Target className="mr-1.5 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
                 休憩時間
               </>
             )}
@@ -67,9 +67,9 @@ export default function EnhancedTimerDisplay({
         </div>
 
         {/* メインタイマー表示 */}
-        <div className="relative mb-8">
+        <div className="relative mb-6 sm:mb-8">
           {/* 円形プログレスの背景 */}
-          <div className="relative w-64 h-64 mx-auto">
+          <div className="relative w-48 h-48 sm:w-56 sm:h-56 lg:w-64 lg:h-64 mx-auto">
             <svg
               className="w-full h-full transform -rotate-90"
               viewBox="0 0 100 100"
@@ -108,7 +108,7 @@ export default function EnhancedTimerDisplay({
             <div className="absolute inset-0 flex flex-col items-center justify-center">
               <div
                 className={cn(
-                  "text-5xl font-mono font-bold",
+                  "text-3xl sm:text-4xl lg:text-5xl font-mono font-bold",
                   isWorkTimer
                     ? "text-indigo-700 dark:text-indigo-300"
                     : "text-green-700 dark:text-green-300"
@@ -121,13 +121,13 @@ export default function EnhancedTimerDisplay({
         </div>
 
         {/* サイクル情報 */}
-        <div className="space-y-4">
-          <div className="flex justify-center gap-2">
+        <div className="space-y-3 sm:space-y-4">
+          <div className="flex justify-center gap-1.5 sm:gap-2">
             {Array.from({ length: totalCycles }, (_, i) => (
               <div
                 key={i}
                 className={cn(
-                  "w-3 h-3 rounded-full transition-all duration-300",
+                  "w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full transition-all duration-300",
                   i < currentCycle - 1
                     ? isWorkTimer
                       ? "bg-indigo-500"
@@ -142,7 +142,7 @@ export default function EnhancedTimerDisplay({
             ))}
           </div>
 
-          <div className="text-sm text-muted-foreground">
+          <div className="text-xs sm:text-sm text-muted-foreground">
             サイクル {currentCycle} / {totalCycles}
           </div>
         </div>

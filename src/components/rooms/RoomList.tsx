@@ -1,11 +1,19 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Room } from "@/types";
-import { Plus } from "lucide-react";
+import { Plus, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { JoinWithCodeForm } from "./JoinWithCodeForm";
 import { RoomCard } from "./RoomCard";
 
 export function RoomList() {
@@ -18,6 +26,7 @@ export function RoomList() {
   >([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showJoinDialog, setShowJoinDialog] = useState(false);
 
   useEffect(() => {
     const fetchRooms = async () => {
@@ -72,16 +81,38 @@ export function RoomList() {
       <div className="bg-white">
         <EmptyState
           title="ルームがありません"
-          description="新しいルームを作成して始めましょう"
+          description="新しいルームを作成するか、招待コードでルームに参加しましょう"
           action={
-            <Link href="/rooms/create">
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                ルームを作成
+            <div className="flex gap-2">
+              <Link href="/rooms/create">
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" />
+                  ルームを作成
+                </Button>
+              </Link>
+              <Button variant="outline" onClick={() => setShowJoinDialog(true)}>
+                <UserPlus className="mr-2 h-4 w-4" />
+                ルームに参加
               </Button>
-            </Link>
+            </div>
           }
         />
+
+        {/* 参加ダイアログ */}
+        <Dialog open={showJoinDialog} onOpenChange={setShowJoinDialog}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>ルームに参加</DialogTitle>
+              <DialogDescription>
+                招待コードを入力してルームに参加します
+              </DialogDescription>
+            </DialogHeader>
+            <JoinWithCodeForm
+              onSuccess={() => setShowJoinDialog(false)}
+              showCard={false}
+            />
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
@@ -90,12 +121,18 @@ export function RoomList() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-semibold">参加中のルーム</h2>
-        <Link href="/rooms/create">
-          <Button variant="main">
-            <Plus className="mr-2 h-4 w-4" />
-            ルームを作成
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setShowJoinDialog(true)}>
+            <UserPlus className="mr-2 h-4 w-4" />
+            ルームに参加
           </Button>
-        </Link>
+          <Link href="/rooms/create">
+            <Button variant="main">
+              <Plus className="mr-2 h-4 w-4" />
+              ルームを作成
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -108,6 +145,22 @@ export function RoomList() {
           />
         ))}
       </div>
+
+      {/* 参加ダイアログ */}
+      <Dialog open={showJoinDialog} onOpenChange={setShowJoinDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>ルームに参加</DialogTitle>
+            <DialogDescription>
+              招待コードを入力してルームに参加します
+            </DialogDescription>
+          </DialogHeader>
+          <JoinWithCodeForm
+            onSuccess={() => setShowJoinDialog(false)}
+            showCard={false}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

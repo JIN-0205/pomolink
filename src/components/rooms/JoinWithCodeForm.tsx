@@ -32,7 +32,15 @@ const joinFormSchema = z.object({
 
 type JoinFormValues = z.infer<typeof joinFormSchema>;
 
-export function JoinWithCodeForm() {
+interface JoinWithCodeFormProps {
+  onSuccess?: () => void; // 参加成功時のコールバック
+  showCard?: boolean; // カード表示の有無
+}
+
+export function JoinWithCodeForm({
+  onSuccess,
+  showCard = true,
+}: JoinWithCodeFormProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -81,6 +89,9 @@ export function JoinWithCodeForm() {
           : "ルームに参加しました",
       });
 
+      // 成功時コールバックを実行（ダイアログを閉じる）
+      onSuccess?.();
+
       // 参加したルームに遷移
       router.push(`/rooms/${data.roomId}`);
     } catch (error: unknown) {
@@ -94,6 +105,39 @@ export function JoinWithCodeForm() {
     }
   };
 
+  const FormContent = () => (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="inviteCode"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>招待コード</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="招待コードを入力"
+                  {...field}
+                  disabled={isSubmitting}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <Button type="submit" className="w-full" disabled={isSubmitting}>
+          {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          参加する
+        </Button>
+      </form>
+    </Form>
+  );
+
+  if (!showCard) {
+    return <FormContent />;
+  }
+
   return (
     <Card className="w-full max-w-md mx-auto">
       <CardHeader>
@@ -103,34 +147,7 @@ export function JoinWithCodeForm() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="inviteCode"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>招待コード</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="招待コードを入力"
-                      {...field}
-                      disabled={isSubmitting}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              )}
-              参加する
-            </Button>
-          </form>
-        </Form>
+        <FormContent />
       </CardContent>
     </Card>
   );

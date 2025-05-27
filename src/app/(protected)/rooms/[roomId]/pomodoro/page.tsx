@@ -513,40 +513,44 @@ export default function PomodoroPage() {
   // };
 
   return (
-    <div className="container py-6 max-w-3xl">
+    <div className="container py-4 sm:py-6 max-w-3xl px-4 sm:px-6">
       <Button
         variant="outline"
         size="sm"
         onClick={() => router.back()}
-        className="mb-6"
+        className="mb-4 sm:mb-6"
       >
         <ArrowLeft className="mr-2 h-4 w-4" />
         戻る
       </Button>
 
-      <div className="grid gap-6">
+      <div className="grid gap-4 sm:gap-6">
         {/* タスク情報表示 - タスクがある場合のみ表示 */}
         {!isLoading && task && <TaskSummary task={task} />}
 
         {/* ポモドーロ設定情報（固定値を表示） */}
         <Card className="overflow-hidden">
-          <CardContent className="p-6">
-            <h2 className="text-lg font-semibold mb-4">ポモドーロ設定</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-center">
-              <div className="p-4 bg-blue-50 rounded-lg">
-                <div className="text-2xl font-bold text-blue-600">
+          <CardContent className="p-4 sm:p-6">
+            <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">
+              ポモドーロ設定
+            </h2>
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 text-center">
+              <div className="p-3 sm:p-4 bg-blue-50 rounded-lg">
+                <div className="text-xl sm:text-2xl font-bold text-blue-600">
                   {workDuration}分
                 </div>
-                <div className="text-sm text-blue-800">作業時間</div>
+                <div className="text-xs sm:text-sm text-blue-800">作業時間</div>
               </div>
-              <div className="p-4 bg-green-50 rounded-lg">
-                <div className="text-2xl font-bold text-green-600">
+              <div className="p-3 sm:p-4 bg-green-50 rounded-lg">
+                <div className="text-xl sm:text-2xl font-bold text-green-600">
                   {breakDuration}分
                 </div>
-                <div className="text-sm text-green-800">休憩時間</div>
+                <div className="text-xs sm:text-sm text-green-800">
+                  休憩時間
+                </div>
               </div>
             </div>
-            <p className="text-sm text-muted-foreground mt-4 text-center">
+            <p className="text-xs sm:text-sm text-muted-foreground mt-3 sm:mt-4 text-center">
               ⚡
               時間設定は公平性のため固定されています（ポモドーロテクニック標準）
             </p>
@@ -554,17 +558,19 @@ export default function PomodoroPage() {
         </Card>
 
         {/* ポモドーロタイマー */}
-        <div className="flex flex-col items-center justify-center space-y-6">
+        <div className="flex flex-col items-center justify-center space-y-4 sm:space-y-6">
           {/* Enhanced Timer Display */}
-          <EnhancedTimerDisplay
-            timeLeft={timeLeft}
-            totalTime={totalTime}
-            timerType={timerType}
-            timerState={timerState}
-            currentCycle={(task?.completedPomos ?? 0) + 1}
-            totalCycles={task?.estimatedPomos ?? 4}
-            formatTime={formatTime}
-          />
+          <div className="w-full max-w-sm">
+            <EnhancedTimerDisplay
+              timeLeft={timeLeft}
+              totalTime={totalTime}
+              timerType={timerType}
+              timerState={timerState}
+              currentCycle={(task?.completedPomos ?? 0) + 1}
+              totalCycles={task?.estimatedPomos ?? 4}
+              formatTime={formatTime}
+            />
+          </div>
 
           <TimerControls
             timerState={timerState}
@@ -574,14 +580,14 @@ export default function PomodoroPage() {
             timerType={timerType}
           />
 
-          <div className="text-center space-y-2">
-            <div className="text-sm text-muted-foreground">
+          <div className="text-center space-y-2 px-4">
+            <div className="text-xs sm:text-sm text-muted-foreground">
               {timerType === "work"
                 ? "集中して作業に取り組みましょう！"
                 : "しっかり休憩をとりましょう。次のサイクルに備えてください。"}
             </div>
             {/* サイクル情報 */}
-            <div className="text-sm">
+            <div className="text-xs sm:text-sm">
               完了したポモドーロ:{" "}
               <span className="font-semibold">{task?.completedPomos || 0}</span>
               {task?.estimatedPomos && ` / ${task.estimatedPomos}`}
@@ -591,16 +597,18 @@ export default function PomodoroPage() {
 
         {/* カメラプレビュー */}
         <Card className="overflow-hidden">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold">カメラ設定</h3>
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 sm:mb-4 gap-2">
+              <h3 className="font-bold text-sm sm:text-base">カメラ設定</h3>
               <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">カメラ</span>
+                <span className="text-xs sm:text-sm text-muted-foreground">
+                  カメラ
+                </span>
                 <Button
                   variant={isCameraEnabled ? "default" : "outline"}
                   size="sm"
                   onClick={() => setIsCameraEnabled(!isCameraEnabled)}
-                  className="px-3 py-1"
+                  className="px-3 py-1 text-xs sm:text-sm"
                 >
                   {isCameraEnabled ? "ON" : "OFF"}
                 </Button>
@@ -608,32 +616,30 @@ export default function PomodoroPage() {
             </div>
 
             {isCameraEnabled ? (
-              <div>
+              <div className="flex flex-col items-center">
                 <video
                   ref={videoRef}
-                  width={320}
-                  height={180}
+                  className="w-full max-w-[320px] h-auto aspect-video rounded bg-black"
                   autoPlay
                   muted
-                  className="rounded bg-black mx-auto block"
                 />
                 <canvas ref={canvasRef} style={{ display: "none" }} />
                 {cameraError && (
-                  <p className="text-red-500 text-sm mt-2 text-center">
+                  <p className="text-red-500 text-xs sm:text-sm mt-2 text-center">
                     {cameraError}
                   </p>
                 )}
                 {isRecording && (
-                  <p className="text-red-500 text-sm mt-2 text-center">
+                  <p className="text-red-500 text-xs sm:text-sm mt-2 text-center">
                     📹 録画中...
                   </p>
                 )}
               </div>
             ) : (
-              <div className="bg-gray-100 rounded flex items-center justify-center h-[180px] w-[320px] mx-auto">
+              <div className="bg-gray-100 rounded flex items-center justify-center aspect-video w-full max-w-[320px] mx-auto">
                 <div className="text-center text-gray-500">
-                  <div className="text-4xl mb-2">📹</div>
-                  <div className="text-sm">カメラがオフです</div>
+                  <div className="text-2xl sm:text-4xl mb-2">📹</div>
+                  <div className="text-xs sm:text-sm">カメラがオフです</div>
                   <div className="text-xs">録画は行われません</div>
                 </div>
               </div>
