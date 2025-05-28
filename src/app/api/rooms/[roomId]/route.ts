@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
 // ルーム詳細取得API
 export async function GET(
   req: NextRequest,
-  { params }: { params: { roomId: string } }
+  { params }: { params: Promise<{ roomId: string }> }
 ) {
   try {
     const { userId } = await auth();
@@ -132,7 +132,7 @@ export async function PATCH(
 // ルーム削除API
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { roomId: string } }
+  { params }: { params: Promise<{ roomId: string }> }
 ) {
   try {
     const { userId } = await auth();

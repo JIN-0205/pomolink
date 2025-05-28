@@ -15,6 +15,36 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "10mb",
     },
   },
+
+  webpack: (config, { isServer }) => {
+    // クライアントサイドでのNode.jsモジュール解決問題を修正
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        // Google Cloud/Firebase関連の問題モジュールを無効化
+        stream: false,
+        http: false,
+        https: false,
+        net: false,
+        tls: false,
+        fs: false,
+        child_process: false,
+        worker_threads: false,
+      };
+
+      // Node.jsのpolyfillを無効化
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        // Node.js内部モジュールを空のモジュールにマッピング
+        stream: false,
+        http: false,
+        https: false,
+        net: false,
+      };
+    }
+
+    return config;
+  },
   images: {
     remotePatterns: [
       {

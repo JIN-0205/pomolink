@@ -14,7 +14,7 @@ if (!APP_URL) {
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { roomId: string } }
+  { params }: { params: Promise<{ roomId: string }> }
 ) {
   try {
     const { roomId } = await params;

@@ -31,6 +31,7 @@ import { useCamera } from "@/hooks/useCamera";
 import { useFrameCapture } from "@/hooks/useFrameCapture";
 import { useVideoEncoder } from "@/hooks/useVideoEncoder";
 import { useVideoUpload } from "@/hooks/useVideoUpload";
+import { AlarmPreset } from "@/lib/audio";
 
 // タイマーの種類
 type TimerType = "work" | "break";
@@ -48,6 +49,10 @@ export default function PomodoroPage() {
   const [isLoading, setIsLoading] = useState(!!taskId);
   const [timerType, setTimerType] = useState<TimerType>("work");
   const [timerState, setTimerState] = useState<TimerState>("idle");
+  const [userSettings, setUserSettings] = useState({
+    workAlarmSound: "buzzer" as AlarmPreset,
+    breakAlarmSound: "kalimba" as AlarmPreset,
+  });
 
   // ポモドーロテクニックの標準時間に固定
   const workDuration = task?.workDuration || 25; // タスクの設定値を使用、デフォルトは25分
@@ -89,6 +94,22 @@ export default function PomodoroPage() {
   const [encodedBlob, setEncodedBlob] = useState<Blob | null>(null);
   const [showVideoConfirm, setShowVideoConfirm] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  // ユーザー設定を取得
+  useEffect(() => {
+    const fetchUserSettings = async () => {
+      try {
+        const res = await fetch("/api/users/settings");
+        if (res.ok) {
+          const settings = await res.json();
+          setUserSettings(settings);
+        }
+      } catch (error) {
+        console.error("Failed to fetch user settings:", error);
+      }
+    };
+    fetchUserSettings();
+  }, []);
 
   // タスク情報を取得
   useEffect(() => {
@@ -569,6 +590,8 @@ export default function PomodoroPage() {
               currentCycle={(task?.completedPomos ?? 0) + 1}
               totalCycles={task?.estimatedPomos ?? 4}
               formatTime={formatTime}
+              workAlarmSound={userSettings.workAlarmSound}
+              breakAlarmSound={userSettings.breakAlarmSound}
             />
           </div>
 

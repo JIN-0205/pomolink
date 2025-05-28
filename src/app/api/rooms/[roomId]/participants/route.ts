@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 // ルーム参加者一覧取得API
 export async function GET(
   req: NextRequest,
-  { params }: { params: { roomId: string } }
+  { params }: { params: Promise<{ roomId: string }> }
 ) {
   try {
     const { userId } = await auth();
@@ -22,8 +22,9 @@ export async function GET(
     }
 
     // ルームを確認
+    const roomId = (await params).roomId;
     const room = await prisma.room.findUnique({
-      where: { id: params.roomId },
+      where: { id: roomId },
       include: {
         participants: {
           include: {

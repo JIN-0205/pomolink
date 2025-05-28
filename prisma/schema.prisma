@@ -26,6 +26,10 @@ model User {
   // 通知設定
   emailNotifications Boolean @default(true)
 
+  // タイマー設定を追加
+  workAlarmSound  String @default("buzzer") // "buzzer" | "siren" | "retro" | "kalimba" | "levelup"
+  breakAlarmSound String @default("kalimba") // "buzzer" | "siren" | "retro" | "kalimba" | "levelup"
+
   // ユーザーが作成したルーム（プランナーとして）
   createdRooms Room[] @relation("RoomCreator")
 

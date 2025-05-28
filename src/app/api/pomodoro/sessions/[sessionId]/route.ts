@@ -5,9 +5,9 @@ import { NextRequest, NextResponse } from "next/server";
 // PATCH: セッションの録画情報・完了状態を更新
 export async function PATCH(
   req: NextRequest,
-  context: { params: { sessionId: string } }
+  context: { params: Promise<{ sessionId: string }> }
 ) {
-  const { sessionId } = context.params;
+  const { sessionId } = await context.params;
   try {
     const { userId: clerkId } = await auth();
     if (!clerkId) return new NextResponse("未認証", { status: 401 });

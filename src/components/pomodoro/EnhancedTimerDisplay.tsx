@@ -1,7 +1,9 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { playTimerSound, type AlarmPreset } from "@/lib/audio";
 import { cn } from "@/lib/utils";
 import { Target, Zap } from "lucide-react";
+import { useEffect, useRef } from "react";
 
 interface EnhancedTimerDisplayProps {
   timeLeft: number;
@@ -11,6 +13,8 @@ interface EnhancedTimerDisplayProps {
   currentCycle?: number;
   totalCycles?: number;
   formatTime: (seconds: number) => string;
+  workAlarmSound?: AlarmPreset;
+  breakAlarmSound?: AlarmPreset;
 }
 
 export default function EnhancedTimerDisplay({
@@ -21,9 +25,143 @@ export default function EnhancedTimerDisplay({
   currentCycle = 1,
   totalCycles = 4,
   formatTime,
+  workAlarmSound = "buzzer",
+  breakAlarmSound = "levelup",
 }: EnhancedTimerDisplayProps) {
   const progress = ((totalTime - timeLeft) / totalTime) * 100;
   const isWorkTimer = timerType === "work";
+  const prevTimeLeftRef = useRef(timeLeft);
+
+  // タイマー終了を検知して効果音を再生
+  const prevTimerStateRef = useRef(timerState);
+  const prevTimerTypeRef = useRef(timerType);
+
+  // アラーム再生フラグを追加（同じタイマー終了で複数回鳴らないため）
+  const alarmPlayedRef = useRef(false);
+
+  useEffect(() => {
+    console.log("Timer effect triggered:", {
+      prevTimeLeft: prevTimeLeftRef.current,
+      currentTimeLeft: timeLeft,
+      prevTimerState: prevTimerStateRef.current,
+      currentTimerState: timerState,
+      prevTimerType: prevTimerTypeRef.current,
+      currentTimerType: timerType,
+      workAlarmSound,
+      breakAlarmSound,
+      alarmPlayed: alarmPlayedRef.current,
+    });
+
+    // パターン1: timeLeftが1以上から0になった場合
+    const timeEndedPattern1 =
+      prevTimeLeftRef.current > 0 && timeLeft === 0 && timerState === "running";
+
+    // パターン2: timerStateがrunningからcompletedに変わった場合
+    const timeEndedPattern2 =
+      prevTimerStateRef.current === "running" && timerState === "completed";
+
+    // パターン3: timeLeftが小さい値から大きい値にジャンプした場合（リセット検知）
+    const timeEndedPattern3 =
+      prevTimeLeftRef.current > 0 &&
+      prevTimeLeftRef.current <= 5 &&
+      timeLeft > prevTimeLeftRef.current + 10 &&
+      prevTimerStateRef.current === "running";
+
+    // パターン4: timeLeftが2から1に減った時点でタイマー終了を予測（早期検知）
+    const timeEndedPattern4 =
+      prevTimeLeftRef.current === 2 &&
+      timeLeft === 1 &&
+      timerState === "running" &&
+      !alarmPlayedRef.current; // まだアラームが鳴っていない場合のみ
+
+    // パターン5: timerTypeが切り替わった時点でタイマー終了を検知
+    const timeEndedPattern5 =
+      prevTimerTypeRef.current !== timerType &&
+      prevTimeLeftRef.current <= 3 &&
+      prevTimerStateRef.current === "running" &&
+      !alarmPlayedRef.current; // まだアラームが鳴っていない場合のみ
+
+    if (
+      timeEndedPattern1 ||
+      timeEndedPattern2 ||
+      timeEndedPattern3 ||
+      timeEndedPattern4 ||
+      timeEndedPattern5
+    ) {
+      // パターン4、5の場合は前の状態のタイマータイプを使用、それ以外は現在のタイプまたは前のタイプを使用
+      let endedTimerType: "work" | "break";
+
+      if (timeEndedPattern4 || timeEndedPattern5) {
+        // 早期検知の場合は前のタイマータイプを使用
+        endedTimerType = prevTimerTypeRef.current;
+      } else {
+        // 通常の検知の場合は前のタイマータイプを使用
+        endedTimerType = prevTimerTypeRef.current;
+      }
+
+      const alarmSound =
+        endedTimerType === "work" ? workAlarmSound : breakAlarmSound;
+
+      console.log("Timer finished:", {
+        currentTimerType: timerType,
+        prevTimerType: prevTimerTypeRef.current,
+        endedTimerType,
+        isWorkTimer: endedTimerType === "work",
+        workAlarmSound,
+        breakAlarmSound,
+        selectedAlarmSound: alarmSound,
+        prevTimeLeft: prevTimeLeftRef.current,
+        currentTimeLeft: timeLeft,
+        prevTimerState: prevTimerStateRef.current,
+        currentTimerState: timerState,
+        pattern1: timeEndedPattern1,
+        pattern2: timeEndedPattern2,
+        pattern3: timeEndedPattern3,
+        pattern4: timeEndedPattern4,
+        pattern5: timeEndedPattern5,
+        alarmPlayed: alarmPlayedRef.current,
+      });
+
+      // アラームを再生し、フラグを設定
+      playTimerSound(endedTimerType, alarmSound);
+      alarmPlayedRef.current = true;
+    } else {
+      console.log("Timer not finished - conditions not met:", {
+        pattern1_condition1: prevTimeLeftRef.current > 0,
+        pattern1_condition2: timeLeft === 0,
+        pattern1_condition3: timerState === "running",
+        pattern1: timeEndedPattern1,
+        pattern2_condition1: prevTimerStateRef.current === "running",
+        pattern2_condition2: timerState === "completed",
+        pattern2: timeEndedPattern2,
+        pattern3_condition1: prevTimeLeftRef.current > 0,
+        pattern3_condition2: prevTimeLeftRef.current <= 5,
+        pattern3_condition3: timeLeft > prevTimeLeftRef.current + 10,
+        pattern3_condition4: prevTimerStateRef.current === "running",
+        pattern3: timeEndedPattern3,
+        pattern4_condition1: prevTimeLeftRef.current === 2,
+        pattern4_condition2: timeLeft === 1,
+        pattern4_condition3: timerState === "running",
+        pattern4_condition4: !alarmPlayedRef.current,
+        pattern4: timeEndedPattern4,
+        pattern5_condition1: prevTimerTypeRef.current !== timerType,
+        pattern5_condition2: prevTimeLeftRef.current <= 3,
+        pattern5_condition3: prevTimerStateRef.current === "running",
+        pattern5_condition4: !alarmPlayedRef.current,
+        pattern5: timeEndedPattern5,
+      });
+    }
+
+    // 新しいタイマーが開始された場合（timeLeftが大幅に増加）、アラームフラグをリセット
+    if (timeLeft > prevTimeLeftRef.current + 10) {
+      console.log("New timer started, resetting alarm flag");
+      alarmPlayedRef.current = false;
+    }
+
+    prevTimeLeftRef.current = timeLeft;
+    prevTimerStateRef.current = timerState;
+    prevTimerTypeRef.current = timerType;
+  }, [timeLeft, timerState, timerType, workAlarmSound, breakAlarmSound]);
 
   return (
     <Card
@@ -119,7 +257,6 @@ export default function EnhancedTimerDisplay({
             </div>
           </div>
         </div>
-
         {/* サイクル情報 */}
         <div className="space-y-3 sm:space-y-4">
           <div className="flex justify-center gap-1.5 sm:gap-2">

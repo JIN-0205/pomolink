@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { roomId: string } }
+  { params }: { params: Promise<{ roomId: string }> }
 ) {
   try {
     // 認証
@@ -24,8 +24,9 @@ export async function POST(
     }
 
     // ルームと権限の確認
+    const roomId = (await params).roomId;
     const room = await prisma.room.findUnique({
-      where: { id: params.roomId },
+      where: { id: roomId },
       include: {
         participants: {
           where: {
@@ -50,7 +51,7 @@ export async function POST(
     }
 
     // 新しい招待コードを生成
-    const newInviteCode = generateInviteCode();
+    const newInviteCode = await generateInviteCode();
 
     // 一意性を確保（重複チェック）
     const existingRoomWithCode = await prisma.room.findUnique({
@@ -59,10 +60,10 @@ export async function POST(
 
     // 万が一重複する場合は再生成
     if (existingRoomWithCode) {
-      const retryCode = generateInviteCode(10); // 長さを増やして再生成
+      const retryCode = await generateInviteCode();
 
       const updatedRoom = await prisma.room.update({
-        where: { id: params.roomId },
+        where: { id: roomId },
         data: { inviteCode: retryCode },
       });
 
@@ -74,7 +75,7 @@ export async function POST(
 
     // 招待コードを更新
     const updatedRoom = await prisma.room.update({
-      where: { id: params.roomId },
+      where: { id: roomId },
       data: { inviteCode: newInviteCode },
     });
 
