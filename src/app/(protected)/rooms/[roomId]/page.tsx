@@ -2,9 +2,11 @@
 
 import { InviteCodeDisplay } from "@/components/rooms/InviteCodeDisplay";
 import { InviteModal } from "@/components/rooms/InviteModal";
+import { MainPlannerManager } from "@/components/rooms/MainPlannerManager";
 import { ParticipantList } from "@/components/rooms/ParticipantList";
 import { ShareRoomDialog } from "@/components/rooms/ShareRoomDialog";
 import { TaskList } from "@/components/tasks/TaskList";
+import { TaskProposalManager } from "@/components/tasks/TaskProposalManager";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,7 +18,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { RoomWithParticipants, Task } from "@/types";
+import { RoomWithParticipants, Task, TaskProposalWithProposer } from "@/types";
 import { useUser } from "@clerk/nextjs";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
@@ -48,6 +50,9 @@ export default function RoomPage() {
 
   const [room, setRoom] = useState<RoomWithParticipants | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [taskProposals, setTaskProposals] = useState<
+    TaskProposalWithProposer[]
+  >([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(defaultTab);
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -88,6 +93,13 @@ export default function RoomPage() {
         if (tasksRes.ok) {
           const tasksData = await tasksRes.json();
           setTasks(tasksData);
+        }
+
+        // タスク提案情報も取得
+        const proposalsRes = await fetch(`/api/rooms/${roomId}/task-proposals`);
+        if (proposalsRes.ok) {
+          const proposalsData = await proposalsRes.json();
+          setTaskProposals(proposalsData);
         }
       } catch (error) {
         console.error(error);
@@ -257,6 +269,10 @@ export default function RoomPage() {
           <TabsTrigger value="overview">概要</TabsTrigger>
           <TabsTrigger value="tasks">タスク</TabsTrigger>
           <TabsTrigger value="participants">参加者</TabsTrigger>
+          {isPlanner && <TabsTrigger value="proposals">提案管理</TabsTrigger>}
+          {(isCreator || room?.mainPlannerId === currentUserDbId) && (
+            <TabsTrigger value="management">ルーム管理</TabsTrigger>
+          )}
         </TabsList>
 
         {/* 概要タブ */}
@@ -540,6 +556,28 @@ export default function RoomPage() {
                 )}
               </CardContent>
             </Card>
+
+            {/* パフォーマー用タスク提案セクション */}
+            {!isPlanner && currentUserParticipant?.role === "PERFORMER" && (
+              <Card className="md:col-span-2">
+                <CardHeader>
+                  <CardTitle className="text-lg font-bold text-indigo-900">
+                    タスク提案
+                  </CardTitle>
+                  <CardDescription className="text-sm text-gray-500">
+                    新しいタスクを提案できます
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <TaskProposalManager
+                    roomId={roomId as string}
+                    proposals={taskProposals}
+                    userRole="PERFORMER"
+                    isMainPlanner={false}
+                  />
+                </CardContent>
+              </Card>
+            )}
           </div>
         </TabsContent>
 
@@ -583,6 +621,88 @@ export default function RoomPage() {
             </div>
           </div>
         </TabsContent>
+
+        {/* 提案管理タブ - プランナーのみ */}
+        {isPlanner && (
+          <TabsContent value="proposals">
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold">タスク提案管理</h2>
+                  <p className="text-muted-foreground">
+                    パフォーマーからのタスク提案を確認・承認できます
+                  </p>
+                </div>
+              </div>
+
+              <TaskProposalManager
+                roomId={roomId as string}
+                proposals={taskProposals}
+                userRole="PLANNER"
+                isMainPlanner={room?.mainPlannerId === currentUserDbId}
+              />
+            </div>
+          </TabsContent>
+        )}
+
+        {/* ルーム管理タブ - 作成者またはメインプランナー */}
+        {(isCreator || room?.mainPlannerId === currentUserDbId) && (
+          <TabsContent value="management">
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold">ルーム管理</h2>
+                  <p className="text-muted-foreground">
+                    ルームの高度な設定を管理できます
+                  </p>
+                </div>
+              </div>
+
+              {/* メインプランナー管理 */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>メインプランナー設定</CardTitle>
+                  <CardDescription>
+                    メインプランナーはタスク提案の最終承認権限を持ちます
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <MainPlannerManager
+                    roomId={roomId as string}
+                    currentMainPlanner={room?.mainPlanner || null}
+                    isCreator={isCreator}
+                    currentUserId={currentUserDbId || ""}
+                    planners={
+                      room?.participants.filter((p) => p.role === "PLANNER") ||
+                      []
+                    }
+                  />
+                </CardContent>
+              </Card>
+
+              {/* その他の管理機能 - 作成者のみ */}
+              {isCreator && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>ルーム設定</CardTitle>
+                    <CardDescription>
+                      基本的なルーム設定を変更できます
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Button
+                      variant="outline"
+                      onClick={() => router.push(`/rooms/${roomId}/settings`)}
+                    >
+                      <Settings className="mr-2 h-4 w-4" />
+                      詳細設定
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </TabsContent>
+        )}
       </Tabs>
 
       {/* モーダル */}

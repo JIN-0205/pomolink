@@ -34,6 +34,14 @@ export async function GET(
             imageUrl: true,
           },
         },
+        mainPlanner: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            imageUrl: true,
+          },
+        },
         participants: {
           include: {
             user: {

@@ -103,10 +103,14 @@ export default function JoinPage() {
       }
 
       const data = await response.json();
+
+      // ロール情報を含めたトーストメッセージ
+      const roleText =
+        data.role === "PERFORMER" ? "パフォーマー" : "プランナー";
       toast.success("参加完了", {
         description: data.alreadyJoined
           ? `${roomInfo.name}にはすでに参加しています`
-          : `${roomInfo.name}に参加しました`,
+          : `${roomInfo.name}に${roleText}として参加しました`,
       });
 
       // ルームページに遷移

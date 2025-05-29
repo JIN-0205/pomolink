@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
     // 招待コードを生成
     const inviteCode = await generateInviteCode();
 
-    // ルームを作成
+    // ルームを作成（作成者を自動的にメインプランナーに設定）
     const room = await prisma.room.create({
       data: {
         name,
@@ -38,6 +38,7 @@ export async function POST(req: NextRequest) {
         isPrivate,
         inviteCode,
         creatorId: user.id,
+        mainPlannerId: user.id, // 作成者を自動的にメインプランナーに設定
         participants: {
           create: {
             userId: user.id,

@@ -33,6 +33,9 @@ model User {
   // ユーザーが作成したルーム（プランナーとして）
   createdRooms Room[] @relation("RoomCreator")
 
+  // メインプランナーとして設定されているルーム
+  mainPlannerRooms Room[] @relation("RoomMainPlanner")
+
   // ユーザーが参加しているルーム
   participantRooms RoomParticipant[]
 
@@ -41,6 +44,9 @@ model User {
 
   // ユーザーが送った招待
   sentInvitations Invitation[] @relation("InvitationSender")
+
+  // タスク提案
+  taskProposals TaskProposal[]
 
   // サブスクリプション情報
   subscription Subscription?
@@ -67,11 +73,18 @@ model Room {
   creatorId String
   creator   User   @relation("RoomCreator", fields: [creatorId], references: [id], onDelete: Cascade)
 
+  // メインプランナー（デフォルトは作成者、変更可能）
+  mainPlannerId String?
+  mainPlanner   User?   @relation("RoomMainPlanner", fields: [mainPlannerId], references: [id], onDelete: SetNull)
+
   // ルーム参加者
   participants RoomParticipant[]
 
   // ルーム内のタスク
   tasks Task[]
+
+  // タスク提案
+  taskProposals TaskProposal[]
 
   // ルームへの招待
   invitations  Invitation[]
@@ -258,6 +271,28 @@ model PointHistory {
   reason        String?
   relatedTaskId String?
   createdAt     DateTime  @default(now())
+}
+
+// タスク提案モデル
+model TaskProposal {
+  id          String         @id @default(cuid())
+  roomId      String
+  room        Room           @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  proposerId  String
+  proposer    User           @relation(fields: [proposerId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  status      ProposalStatus @default(PENDING)
+  reviewedBy  String? // レビューしたプランナーのID
+  reviewNote  String? // プランナーからのコメント
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}
+
+enum ProposalStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 enum PointType {

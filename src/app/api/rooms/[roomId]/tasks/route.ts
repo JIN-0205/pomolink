@@ -24,8 +24,15 @@ export async function POST(
       return new NextResponse("ユーザーが見つかりません", { status: 404 });
     }
 
-    const { title, description, priority, estimatedPomos, dueDate } =
-      await req.json();
+    const {
+      title,
+      description,
+      priority,
+      estimatedPomos,
+      dueDate,
+      workDuration,
+      breakDuration,
+    } = await req.json();
 
     if (!title) {
       return new NextResponse("タスク名は必須です", { status: 400 });
@@ -65,6 +72,8 @@ export async function POST(
         priority: priority || "MEDIUM",
         estimatedPomos: estimatedPomos || null,
         dueDate: dueDate ? new Date(dueDate) : null,
+        workDuration: workDuration || null,
+        breakDuration: breakDuration || null,
         roomId: room.id,
       },
     });

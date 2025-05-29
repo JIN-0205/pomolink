@@ -83,10 +83,13 @@ export function JoinWithCodeForm({
 
       const data = await response.json();
 
+      // ロール情報を含めたトーストメッセージ
+      const roleText =
+        data.role === "PERFORMER" ? "パフォーマー" : "プランナー";
       toast.success("参加成功", {
         description: data.alreadyJoined
           ? "すでにこのルームに参加しています"
-          : "ルームに参加しました",
+          : `ルームに${roleText}として参加しました`,
       });
 
       // 成功時コールバックを実行（ダイアログを閉じる）

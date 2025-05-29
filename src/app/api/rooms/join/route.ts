@@ -160,9 +160,7 @@ async function handleJoinRoom(
   const room = await prisma.room.findUnique({
     where: { inviteCode },
     include: {
-      participants: {
-        where: { userId: user.id },
-      },
+      participants: true,
     },
   });
 
@@ -171,10 +169,38 @@ async function handleJoinRoom(
   }
 
   // すでに参加しているか確認
-  if (room.participants.length > 0) {
+  const existingParticipant = room.participants.find(
+    (p) => p.userId === user.id
+  );
+  if (existingParticipant) {
     return NextResponse.json({
       alreadyJoined: true,
       roomId: room.id,
+    });
+  }
+
+  // ロール決定ロジック：パフォーマーが既に存在する場合はプランナーとして参加
+  const existingPerformer = room.participants.find(
+    (p) => p.role === "PERFORMER"
+  );
+  const role = existingPerformer ? "PLANNER" : "PERFORMER";
+
+  // 一人目のプランナーで、かつメインプランナーが未設定の場合のみメインプランナーに設定
+  let shouldSetAsMainPlanner = false;
+  if (role === "PLANNER") {
+    const existingPlanners = room.participants.filter(
+      (p) => p.role === "PLANNER"
+    );
+    // プランナーが他にいない、かつメインプランナーが未設定の場合のみ
+    shouldSetAsMainPlanner =
+      existingPlanners.length === 0 && !room.mainPlannerId;
+
+    console.log("Main planner assignment check:", {
+      userId: user.id,
+      role,
+      existingPlannersCount: existingPlanners.length,
+      currentMainPlannerId: room.mainPlannerId,
+      shouldSetAsMainPlanner,
     });
   }
 
@@ -183,9 +209,25 @@ async function handleJoinRoom(
     data: {
       userId: user.id,
       roomId: room.id,
-      role: "PERFORMER", // デフォルトロール
+      role: role,
     },
   });
+
+  // 一人目のプランナーの場合、ルームのメインプランナーとして設定
+  if (shouldSetAsMainPlanner) {
+    console.log("Setting user as main planner:", {
+      userId: user.id,
+      roomId: room.id,
+    });
+
+    await prisma.room.update({
+      where: { id: room.id },
+      data: { mainPlannerId: user.id },
+    });
+
+    console.log("Main planner set successfully");
+  }
+
   // Firestoreにも同期
   try {
     const firestore = getFirestore(adminApp);
@@ -196,7 +238,7 @@ async function handleJoinRoom(
       .doc(user.id)
       .set({
         userId: user.id,
-        role: "PERFORMER",
+        role: role,
         joinedAt: new Date(),
       });
   } catch (firestoreError) {
@@ -208,5 +250,6 @@ async function handleJoinRoom(
   return NextResponse.json({
     alreadyJoined: false,
     roomId: room.id,
+    role: role, // 参加したロールを含める
   });
 }

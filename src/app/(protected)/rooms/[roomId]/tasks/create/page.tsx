@@ -51,6 +51,8 @@ const formSchema = z.object({
   priority: z.enum(["LOW", "MEDIUM", "HIGH"]),
   estimatedPomos: z.coerce.number().min(1).optional().nullable(),
   dueDate: z.date().optional().nullable(),
+  workDuration: z.coerce.number().min(5).max(90).optional(),
+  breakDuration: z.coerce.number().min(1).max(30).optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -69,6 +71,8 @@ export default function CreateTaskPage() {
       priority: "MEDIUM",
       estimatedPomos: null,
       dueDate: null,
+      workDuration: 25,
+      breakDuration: 5,
     },
   });
 
@@ -261,6 +265,68 @@ export default function CreateTaskPage() {
                   </FormItem>
                 )}
               />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
+                  control={form.control}
+                  name="workDuration"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>ポモドーロ作業時間（分）</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min={5}
+                          max={90}
+                          placeholder="25"
+                          {...field}
+                          value={field.value || ""}
+                          onChange={(e) => {
+                            const value = e.target.value
+                              ? parseInt(e.target.value)
+                              : undefined;
+                            field.onChange(value);
+                          }}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        5分〜90分の範囲で設定してください（推奨：25分）
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="breakDuration"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>ポモドーロ休憩時間（分）</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min={1}
+                          max={30}
+                          placeholder="5"
+                          {...field}
+                          value={field.value || ""}
+                          onChange={(e) => {
+                            const value = e.target.value
+                              ? parseInt(e.target.value)
+                              : undefined;
+                            field.onChange(value);
+                          }}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        1分〜30分の範囲で設定してください（推奨：5分）
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             </form>
           </Form>
         </CardContent>

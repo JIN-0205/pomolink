@@ -129,6 +129,21 @@ export async function PATCH(
       });
     }
 
+    // PERFORMERに変更する場合、既に他のPERFORMERが存在しないか確認
+    if (role === "PERFORMER") {
+      const existingPerformer = room.participants.find(
+        (p) => p.role === "PERFORMER" && p.id !== participantId
+      );
+      if (existingPerformer) {
+        return new NextResponse(
+          "このルームには既にパフォーマーが存在します。1つのルームには1人のパフォーマーのみ設定できます。",
+          {
+            status: 400,
+          }
+        );
+      }
+    }
+
     // 参加者のロールを更新
     const updatedParticipant = await prisma.roomParticipant.update({
       where: { id: participantId },

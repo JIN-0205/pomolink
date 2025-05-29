@@ -26,6 +26,7 @@ export type Room = {
   createdAt: string;
   updatedAt: string;
   creatorId: string;
+  mainPlannerId?: string | null;
 };
 
 export type RoomParticipant = {
@@ -34,6 +35,19 @@ export type RoomParticipant = {
   roomId: string;
   role: "PLANNER" | "PERFORMER";
   joinedAt: string;
+};
+
+export type TaskProposal = {
+  id: string;
+  roomId: string;
+  proposerId: string;
+  title: string;
+  description: string | null;
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  reviewedBy: string | null;
+  reviewNote: string | null;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type Task = {
@@ -121,6 +135,7 @@ export type RoomWithParticipants = Room & {
   participants: (RoomParticipant & {
     user: User;
   })[];
+  mainPlanner?: User | null;
 };
 
 export type TaskWithRoom = Task & {
@@ -134,6 +149,15 @@ export type InvitationWithDetails = Invitation & {
 };
 
 // API応答型
+
+// リレーション付きの型
+export type TaskProposalWithProposer = TaskProposal & {
+  proposer: User;
+};
+
+export type RoomWithTaskProposals = Room & {
+  taskProposals: TaskProposalWithProposer[];
+};
 
 export type ValidateCodeResponse = {
   valid: boolean;
