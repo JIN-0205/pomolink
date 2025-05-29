@@ -1,3 +1,14 @@
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Pause, Play, RotateCcw, SkipForward } from "lucide-react";
@@ -53,17 +64,44 @@ const TimerControls = ({
           </Button>
         )}
 
-        <Button
-          onClick={onSkip}
-          size="lg"
-          variant="outline"
-          className="h-12 sm:h-14 px-4 sm:px-6 text-base sm:text-lg font-semibold border-2 hover-lift"
-          disabled={timerState === "idle" || timerState === "completed"}
-        >
-          <SkipForward className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-          <span className="hidden sm:inline">スキップ</span>
-          <span className="sm:hidden">Skip</span>
-        </Button>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button
+              size="lg"
+              variant="outline"
+              className="h-12 sm:h-14 px-4 sm:px-6 text-base sm:text-lg font-semibold border-2 hover-lift"
+              disabled={timerState === "idle" || timerState === "completed"}
+            >
+              <SkipForward className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+              <span className="hidden sm:inline">スキップ</span>
+              <span className="sm:hidden">Skip</span>
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {isWorkTimer
+                  ? "作業タイマーをスキップしますか？"
+                  : "休憩タイマーをスキップしますか？"}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {isWorkTimer ? (
+                  <>
+                    スキップすると録画は破棄され、完了ポモドーロもカウントされません。
+                    <br />
+                    本当にスキップしますか？
+                  </>
+                ) : (
+                  "休憩をスキップして次の作業に進みますか？"
+                )}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>キャンセル</AlertDialogCancel>
+              <AlertDialogAction onClick={onSkip}>スキップ</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
 
       {/* サブコントロール */}

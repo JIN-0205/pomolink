@@ -227,9 +227,88 @@ export default function PomodoroPage() {
   // タイマーのスキップ
   const skipTimer = () => {
     if (timerState !== "running" && timerState !== "paused") return;
-    setTimerEndTime(null); // スキップ時もクリア
-    handleTimerCompleted();
+    setTimerEndTime(null); // スキップ時はクリア
+    handleTimerSkipped();
   };
+
+  // タイマーのスキップ処理（完了とは別の処理）
+  const handleTimerSkipped = useCallback(async () => {
+    setTimerEndTime(null);
+
+    if (timerType === "work") {
+      // 作業タイマーのスキップ処理
+
+      // カメラが有効な場合は録画を停止して破棄
+      if (isCameraEnabled) {
+        stopRecording();
+        clearFrames(); // フレームを破棄
+
+        // エンコード済みデータがあれば破棄
+        if (encodedBlob) {
+          setEncodedBlob(null);
+        }
+        if (previewUrl) {
+          URL.revokeObjectURL(previewUrl);
+          setPreviewUrl(null);
+        }
+        resetStatus();
+      }
+
+      // セッションがある場合は破棄として記録
+      if (sessionId) {
+        try {
+          await fetch(`/api/pomodoro/sessions/${sessionId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              endTime: new Date().toISOString(),
+              completed: false, // スキップなので完了ではない
+              skipped: true, // スキップフラグ
+            }),
+          });
+        } catch (error) {
+          console.error("セッション更新エラー:", error);
+        }
+      }
+
+      // 通知（スキップ）
+      toast("作業タイマーをスキップしました", {
+        description: "録画は破棄され、完了ポモドーロはカウントされません。",
+      });
+
+      // 休憩タイマーに移行
+      setTimerType("break");
+      setTimeLeft(breakDuration * 60);
+      setTotalTime(breakDuration * 60);
+      setTimerState("idle");
+      setSessionId(undefined); // セッションIDをリセット
+
+      // 注意：完了ポモドーロのカウントアップは行わない
+    } else {
+      // 休憩タイマーのスキップ処理
+      toast("休憩をスキップしました", {
+        description: "次の作業を開始しましょう！",
+      });
+
+      // 作業タイマーに移行
+      setTimerType("work");
+      setTimeLeft(workDuration * 60);
+      setTotalTime(workDuration * 60);
+      setTimerState("idle");
+      setSessionId(undefined); // 新しいセッションのため初期化
+    }
+  }, [
+    timerType,
+    workDuration,
+    breakDuration,
+    isCameraEnabled,
+    stopRecording,
+    clearFrames,
+    encodedBlob,
+    previewUrl,
+    resetStatus,
+    sessionId,
+  ]);
 
   // 動画保存（アップロード）
   const handleSaveVideo = useCallback(async () => {

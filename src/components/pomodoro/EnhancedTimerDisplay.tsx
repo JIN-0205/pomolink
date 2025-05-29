@@ -52,57 +52,62 @@ export default function EnhancedTimerDisplay({
       alarmPlayed: alarmPlayedRef.current,
     });
 
-    // パターン1: timeLeftが1以上から0になった場合
-    const timeEndedPattern1 =
-      prevTimeLeftRef.current > 0 && timeLeft === 0 && timerState === "running";
+    // 新しいタイマーが開始された場合（timeLeftが大幅に増加）、アラームフラグをリセット
+    if (timeLeft > prevTimeLeftRef.current + 10) {
+      console.log("New timer started, resetting alarm flag");
+      alarmPlayedRef.current = false;
+    }
 
-    // パターン2: timerStateがrunningからcompletedに変わった場合
-    const timeEndedPattern2 =
-      prevTimerStateRef.current === "running" && timerState === "completed";
+    // アラームが既に再生されている場合は早期リターン
+    if (alarmPlayedRef.current) {
+      console.log("Alarm already played, skipping");
+      prevTimeLeftRef.current = timeLeft;
+      prevTimerStateRef.current = timerState;
+      prevTimerTypeRef.current = timerType;
+      return;
+    }
 
-    // パターン3: timeLeftが小さい値から大きい値にジャンプした場合（リセット検知）
-    const timeEndedPattern3 =
-      prevTimeLeftRef.current > 0 &&
-      prevTimeLeftRef.current <= 5 &&
-      timeLeft > prevTimeLeftRef.current + 10 &&
-      prevTimerStateRef.current === "running";
+    // タイマー終了の検知（優先度順で評価し、最初にマッチしたもののみ実行）
+    let timerFinished = false;
+    let endedTimerType: "work" | "break" | null = null;
+    let detectionPattern = "";
 
-    // パターン4: timeLeftが2から1に減った時点でタイマー終了を予測（早期検知）
-    const timeEndedPattern4 =
-      prevTimeLeftRef.current === 2 &&
-      timeLeft === 1 &&
-      timerState === "running" &&
-      !alarmPlayedRef.current; // まだアラームが鳴っていない場合のみ
-
-    // パターン5: timerTypeが切り替わった時点でタイマー終了を検知
-    const timeEndedPattern5 =
-      prevTimerTypeRef.current !== timerType &&
-      prevTimeLeftRef.current <= 3 &&
-      prevTimerStateRef.current === "running" &&
-      !alarmPlayedRef.current; // まだアラームが鳴っていない場合のみ
-
+    // パターン1（最優先）: timeLeftが1以上から0になった場合（確実な終了検知）
     if (
-      timeEndedPattern1 ||
-      timeEndedPattern2 ||
-      timeEndedPattern3 ||
-      timeEndedPattern4 ||
-      timeEndedPattern5
+      prevTimeLeftRef.current > 0 &&
+      timeLeft === 0 &&
+      timerState === "running"
     ) {
-      // パターン4、5の場合は前の状態のタイマータイプを使用、それ以外は現在のタイプまたは前のタイプを使用
-      let endedTimerType: "work" | "break";
+      timerFinished = true;
+      endedTimerType = prevTimerTypeRef.current;
+      detectionPattern = "timeLeft_to_zero";
+    }
+    // パターン2: timerStateがrunningからcompletedに変わった場合
+    else if (
+      prevTimerStateRef.current === "running" &&
+      timerState === "completed"
+    ) {
+      timerFinished = true;
+      endedTimerType = prevTimerTypeRef.current;
+      detectionPattern = "state_to_completed";
+    }
+    // パターン3: timerTypeが切り替わった場合（タイマー終了により次のタイマーへ）
+    else if (
+      prevTimerTypeRef.current !== timerType &&
+      prevTimerStateRef.current === "running" &&
+      prevTimeLeftRef.current <= 3
+    ) {
+      timerFinished = true;
+      endedTimerType = prevTimerTypeRef.current;
+      detectionPattern = "timer_type_change";
+    }
 
-      if (timeEndedPattern4 || timeEndedPattern5) {
-        // 早期検知の場合は前のタイマータイプを使用
-        endedTimerType = prevTimerTypeRef.current;
-      } else {
-        // 通常の検知の場合は前のタイマータイプを使用
-        endedTimerType = prevTimerTypeRef.current;
-      }
-
+    if (timerFinished && endedTimerType) {
       const alarmSound =
         endedTimerType === "work" ? workAlarmSound : breakAlarmSound;
 
       console.log("Timer finished:", {
+        detectionPattern,
         currentTimerType: timerType,
         prevTimerType: prevTimerTypeRef.current,
         endedTimerType,
@@ -114,48 +119,11 @@ export default function EnhancedTimerDisplay({
         currentTimeLeft: timeLeft,
         prevTimerState: prevTimerStateRef.current,
         currentTimerState: timerState,
-        pattern1: timeEndedPattern1,
-        pattern2: timeEndedPattern2,
-        pattern3: timeEndedPattern3,
-        pattern4: timeEndedPattern4,
-        pattern5: timeEndedPattern5,
-        alarmPlayed: alarmPlayedRef.current,
       });
 
       // アラームを再生し、フラグを設定
       playTimerSound(endedTimerType, alarmSound);
       alarmPlayedRef.current = true;
-    } else {
-      console.log("Timer not finished - conditions not met:", {
-        pattern1_condition1: prevTimeLeftRef.current > 0,
-        pattern1_condition2: timeLeft === 0,
-        pattern1_condition3: timerState === "running",
-        pattern1: timeEndedPattern1,
-        pattern2_condition1: prevTimerStateRef.current === "running",
-        pattern2_condition2: timerState === "completed",
-        pattern2: timeEndedPattern2,
-        pattern3_condition1: prevTimeLeftRef.current > 0,
-        pattern3_condition2: prevTimeLeftRef.current <= 5,
-        pattern3_condition3: timeLeft > prevTimeLeftRef.current + 10,
-        pattern3_condition4: prevTimerStateRef.current === "running",
-        pattern3: timeEndedPattern3,
-        pattern4_condition1: prevTimeLeftRef.current === 2,
-        pattern4_condition2: timeLeft === 1,
-        pattern4_condition3: timerState === "running",
-        pattern4_condition4: !alarmPlayedRef.current,
-        pattern4: timeEndedPattern4,
-        pattern5_condition1: prevTimerTypeRef.current !== timerType,
-        pattern5_condition2: prevTimeLeftRef.current <= 3,
-        pattern5_condition3: prevTimerStateRef.current === "running",
-        pattern5_condition4: !alarmPlayedRef.current,
-        pattern5: timeEndedPattern5,
-      });
-    }
-
-    // 新しいタイマーが開始された場合（timeLeftが大幅に増加）、アラームフラグをリセット
-    if (timeLeft > prevTimeLeftRef.current + 10) {
-      console.log("New timer started, resetting alarm flag");
-      alarmPlayedRef.current = false;
     }
 
     prevTimeLeftRef.current = timeLeft;

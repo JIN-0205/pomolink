@@ -161,9 +161,18 @@ function arpeggio(
   return dt;
 }
 
+// アラーム再生中フラグ（グローバルで管理）
+let isAlarmPlaying = false;
+
 /** アラーム音を再生する関数 */
 export function playAlarm(preset: AlarmPreset) {
   console.log("playAlarm called with preset:", preset);
+
+  // 既に再生中の場合は重複を防ぐ
+  if (isAlarmPlaying) {
+    console.log("Alarm already playing, skipping duplicate");
+    return;
+  }
 
   interface WebkitWindow extends Window {
     webkitAudioContext?: typeof AudioContext;
@@ -177,6 +186,9 @@ export function playAlarm(preset: AlarmPreset) {
 
   try {
     const ctx = new AC();
+
+    // アラーム再生中フラグを設定
+    isAlarmPlaying = true;
 
     // AudioContextの状態をチェック
     console.log("AudioContext state:", ctx.state);
@@ -192,12 +204,14 @@ export function playAlarm(preset: AlarmPreset) {
         })
         .catch((error) => {
           console.error("Failed to resume AudioContext:", error);
+          isAlarmPlaying = false; // エラー時はフラグをリセット
         });
     } else {
       playAlarmSound(ctx, preset);
     }
   } catch (error) {
     console.error("Error playing alarm:", error);
+    isAlarmPlaying = false; // エラー時はフラグをリセット
   }
 }
 
@@ -211,6 +225,7 @@ function playAlarmSound(ctx: AudioContext, preset: AlarmPreset) {
 
   if (!presetFunction) {
     console.error("Preset not found:", preset);
+    isAlarmPlaying = false; // エラー時はフラグをリセット
     return;
   }
 
@@ -224,15 +239,30 @@ function playAlarmSound(ctx: AudioContext, preset: AlarmPreset) {
       () => {
         console.log("Closing audio context for preset:", preset);
         ctx.close();
+        isAlarmPlaying = false; // 再生終了時にフラグをリセット
       },
       duration * 1000 + 500
     );
+  } else {
+    // durationが0の場合も即座にフラグをリセット
+    setTimeout(() => {
+      isAlarmPlaying = false;
+    }, 100);
   }
 }
+
+// フォールバック音再生中フラグ
+let isFallbackPlaying = false;
 
 /** フォールバック音を再生する関数 */
 export function playFallbackSound(type: "work" | "break") {
   console.log("Playing fallback sound for type:", type);
+
+  // 既に再生中の場合は重複を防ぐ
+  if (isFallbackPlaying) {
+    console.log("Fallback sound already playing, skipping duplicate");
+    return;
+  }
 
   try {
     interface WebkitWindow extends Window {
@@ -248,6 +278,9 @@ export function playFallbackSound(type: "work" | "break") {
     }
 
     const audioContext = new AudioContextConstructor();
+
+    // フォールバック音再生中フラグを設定
+    isFallbackPlaying = true;
 
     // AudioContextの状態をチェック
     console.log("Fallback AudioContext state:", audioContext.state);
@@ -284,6 +317,14 @@ export function playFallbackSound(type: "work" | "break") {
         oscillator.start(audioContext.currentTime + index * 0.1);
         oscillator.stop(audioContext.currentTime + 0.5 + index * 0.1);
       });
+
+      // 最後の音が終わったらフラグをリセット
+      setTimeout(
+        () => {
+          isFallbackPlaying = false;
+        },
+        (0.5 + (frequencies.length - 1) * 0.1) * 1000 + 100
+      );
     };
 
     // もしsuspendedなら resume する
@@ -297,12 +338,14 @@ export function playFallbackSound(type: "work" | "break") {
         })
         .catch((error) => {
           console.error("Failed to resume fallback AudioContext:", error);
+          isFallbackPlaying = false; // エラー時はフラグをリセット
         });
     } else {
       playSound();
     }
   } catch (error) {
     console.log("効果音の再生に失敗しました:", error);
+    isFallbackPlaying = false; // エラー時はフラグをリセット
   }
 }
 

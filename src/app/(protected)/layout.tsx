@@ -190,10 +190,9 @@ export default function ProtectedLayout({
           <div className="border-t p-4">
             <div className="flex items-center justify-between">
               <UserButton
-                afterSignOutUrl="/"
                 appearance={{
                   elements: {
-                    avatarBox: "w-10 h-10 hover:scale-110 transition-transform",
+                    avatarBox: "w-10 h-10 hover:scale-130 transition-transform",
                   },
                 }}
               />
