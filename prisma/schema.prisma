@@ -26,6 +26,14 @@ model User {
   // 通知設定
   emailNotifications Boolean @default(true)
 
+  // 詳細なメール通知設定
+  emailInvitations      Boolean @default(true)
+  emailPomodoroComplete Boolean @default(true)
+  emailSessionSummary   Boolean @default(true)
+  emailDailyReminders   Boolean @default(false)
+  emailWeeklyReports    Boolean @default(false)
+  emailMaintenance      Boolean @default(true)
+
   // タイマー設定を追加
   workAlarmSound  String @default("buzzer") // "buzzer" | "siren" | "retro" | "kalimba" | "levelup"
   breakAlarmSound String @default("kalimba") // "buzzer" | "siren" | "retro" | "kalimba" | "levelup"
