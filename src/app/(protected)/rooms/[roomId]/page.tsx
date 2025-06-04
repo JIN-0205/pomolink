@@ -59,6 +59,24 @@ export default function RoomPage() {
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [currentUserDbId, setCurrentUserDbId] = useState<string | null>(null);
 
+  const sendMail = async () => {
+    try {
+      console.log("メール送信リクエストを開始");
+      const res = await fetch("/api/send", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        // body: JSON.stringify({
+        //   email: "<user_email>",
+        // }),
+      });
+      console.log("メール送信リクエスト:", res);
+    } catch (err) {
+      console.error("メール送信エラー:", err);
+    }
+  };
+
   useEffect(() => {
     const fetchUserDbId = async () => {
       if (!user?.id) return;
@@ -200,6 +218,7 @@ export default function RoomPage() {
     <div className="container py-6">
       {/* ルームヘッダー */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
+        <div onClick={sendMail}>hello</div>
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-3xl font-bold">{room.name}</h1>

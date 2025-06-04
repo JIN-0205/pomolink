@@ -68,6 +68,7 @@
 
 import prisma from "@/lib/db";
 import { adminApp } from "@/lib/firebase-admin";
+import { canAddParticipant } from "@/lib/subscription-service";
 import { auth } from "@clerk/nextjs/server";
 import { getFirestore } from "firebase-admin/firestore";
 import { NextRequest, NextResponse } from "next/server";
@@ -177,6 +178,23 @@ async function handleJoinRoom(
       alreadyJoined: true,
       roomId: room.id,
     });
+  }
+
+  // 参加者制限をチェック（メインプランナーのプランに基づく）
+  const mainPlannerId = room.mainPlannerId || room.creatorId;
+  const participantCheck = await canAddParticipant(room.id, mainPlannerId);
+
+  if (!participantCheck.canAdd) {
+    return NextResponse.json(
+      {
+        error: "参加者数の上限に達しています",
+        currentCount: participantCheck.currentCount,
+        maxCount: participantCheck.maxCount,
+        planType: participantCheck.planType,
+        needsUpgrade: true,
+      },
+      { status: 403 }
+    );
   }
 
   // ロール決定ロジック：パフォーマーが既に存在する場合はプランナーとして参加

@@ -64,7 +64,8 @@ model User {
   sessions Session[]
   uploads  Upload[]
 
-  pointHistory PointHistory[]
+  pointHistory   PointHistory[]
+  recordingUsage RecordingUsage[]
 }
 
 // ルームモデル
@@ -194,7 +195,8 @@ model Session {
   dailyReport   DailyReport? @relation(fields: [dailyReportId], references: [id])
   dailyReportId String?
 
-  uploads Upload[]
+  uploads        Upload[]
+  recordingUsage RecordingUsage?
 }
 
 model Task {
@@ -255,7 +257,14 @@ model Subscription {
   stripePriceId          String?
   stripeCurrentPeriodEnd DateTime?
   planType               PlanType  @default(FREE)
-  maxRoomMembers         Int       @default(3)
+
+  // プラン別の制限設定
+  maxDailyRecordings     Int @default(1) // 1日の最大録画数
+  maxParticipants        Int @default(2) // 最大参加者数
+  recordingRetentionDays Int @default(1) // 録画保存期間（日）
+
+  // 従来の設定
+  maxRoomMembers         Int  @default(3)
   historyRetentionMonths Int? // ポイント履歴保存月数（例: FREE=3, PRO=null(無制限)など）
 
   createdAt DateTime @default(now())
@@ -264,8 +273,8 @@ model Subscription {
 
 enum PlanType {
   FREE
+  BASIC
   PRO
-  TEAM
 }
 
 model PointHistory {
@@ -308,4 +317,19 @@ enum PointType {
   SUBMISSION
   SESSION_BONUS
   PLANNER_BONUS
+}
+
+// 録画使用量の追跡
+model RecordingUsage {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      DateTime @default(now()) // 録画した日付
+  sessionId String?  @unique
+  session   Session? @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  fileSize  Int? // ファイルサイズ（bytes）
+  duration  Int? // 録画時間（秒）
+  createdAt DateTime @default(now())
+
+  @@index([userId, date])
 }

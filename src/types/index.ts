@@ -119,8 +119,12 @@ export type Subscription = {
   stripeSubscriptionId?: string | null;
   stripePriceId?: string | null;
   stripeCurrentPeriodEnd?: string | null;
-  planType: "FREE" | "PRO" | "TEAM";
+  planType: "FREE" | "BASIC" | "PRO";
+  maxDailyRecordings: number;
+  maxParticipants: number;
+  recordingRetentionDays: number;
   maxRoomMembers: number;
+  historyRetentionMonths?: number | null;
   createdAt: string;
   updatedAt: string;
 };

@@ -65,7 +65,8 @@ const nextConfig: NextConfig = {
         source: "/(.*)",
         headers: [
           { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
-          { key: "Cross-Origin-Embedder-Policy", value: "require-corp" },
+          // Stripe.js読み込みのためにCOEPを無効化
+          // { key: "Cross-Origin-Embedder-Policy", value: "require-corp" },
         ],
       },
     ];

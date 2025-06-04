@@ -1,9 +1,11 @@
 "use client";
 
+import { SubscriptionInfo } from "@/components/subscription/SubscriptionInfo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { PlanType } from "@prisma/client";
 import {
   Award,
   Calendar,
@@ -33,6 +35,15 @@ interface RecentActivity {
   time: string;
 }
 
+interface SubscriptionUsage {
+  planType: PlanType;
+  dailyRecordingCount: number;
+  maxDailyRecordings: number;
+  maxParticipants: number;
+  recordingRetentionDays: number;
+  activeRooms: number;
+}
+
 export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats>({
     totalPomodoros: 0,
@@ -45,6 +56,8 @@ export default function DashboardPage() {
   const [recentActivities, setRecentActivities] = useState<RecentActivity[]>(
     []
   );
+  const [subscriptionUsage, setSubscriptionUsage] =
+    useState<SubscriptionUsage | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -52,11 +65,13 @@ export default function DashboardPage() {
       try {
         setIsLoading(true);
 
-        // 統計データとアクティビティを並行して取得
-        const [statsResponse, activitiesResponse] = await Promise.all([
-          fetch("/api/dashboard/stats"),
-          fetch("/api/dashboard/activities"),
-        ]);
+        // 統計データ、アクティビティ、サブスクリプション情報を並行して取得
+        const [statsResponse, activitiesResponse, subscriptionResponse] =
+          await Promise.all([
+            fetch("/api/dashboard/stats"),
+            fetch("/api/dashboard/activities"),
+            fetch("/api/subscription/usage"),
+          ]);
 
         if (statsResponse.ok) {
           const statsData = await statsResponse.json();
@@ -71,6 +86,13 @@ export default function DashboardPage() {
         } else {
           console.warn("アクティビティデータの取得に失敗しました");
           setRecentActivities([]);
+        }
+
+        if (subscriptionResponse.ok) {
+          const subscriptionData = await subscriptionResponse.json();
+          setSubscriptionUsage(subscriptionData);
+        } else {
+          console.warn("サブスクリプション情報の取得に失敗しました");
         }
       } catch (error) {
         console.error("ダッシュボードデータの取得エラー:", error);
@@ -329,6 +351,16 @@ export default function DashboardPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* サブスクリプション情報 */}
+      {subscriptionUsage && (
+        <SubscriptionInfo
+          planType={subscriptionUsage.planType}
+          dailyRecordingCount={subscriptionUsage.dailyRecordingCount}
+          currentParticipants={0}
+          roomCount={subscriptionUsage.activeRooms}
+        />
+      )}
     </div>
   );
 }

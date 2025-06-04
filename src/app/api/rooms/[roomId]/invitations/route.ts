@@ -1,5 +1,6 @@
 import prisma from "@/lib/db";
 import { sendInvitationEmail } from "@/lib/email";
+import { canAddParticipant } from "@/lib/subscription-service";
 import { auth } from "@clerk/nextjs/server";
 import { InvitationMethod, UserRole } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
@@ -68,6 +69,23 @@ export async function POST(
     // リクエストのボディを取得
     const body = await req.json();
     const { email, role = "PERFORMER", method = "EMAIL", receiverId } = body;
+
+    // 参加者制限をチェック（メインプランナーのプランに基づく）
+    const mainPlannerId = room.mainPlannerId || room.creatorId;
+    const participantCheck = await canAddParticipant(roomId, mainPlannerId);
+
+    if (!participantCheck.canAdd) {
+      return NextResponse.json(
+        {
+          error: "参加者数の上限に達しています",
+          currentCount: participantCheck.currentCount,
+          maxCount: participantCheck.maxCount,
+          planType: participantCheck.planType,
+          needsUpgrade: true,
+        },
+        { status: 403 }
+      );
+    }
 
     // リクエストの検証
     if (method === "EMAIL" && !email) {

@@ -1,5 +1,6 @@
 "use client";
 
+import { LimitWarning } from "@/components/subscription/LimitWarning";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -14,9 +15,10 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { PlanType } from "@prisma/client";
 import { Loader2, Lock, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -35,6 +37,10 @@ const formSchema = z.object({
 
 export function CreateRoomForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [subscriptionData, setSubscriptionData] = useState<{
+    planType: PlanType;
+    dailyRecordingCount: number;
+  } | null>(null);
   const router = useRouter();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -79,6 +85,25 @@ export function CreateRoomForm() {
       setIsSubmitting(false);
     }
   };
+
+  useEffect(() => {
+    const fetchSubscriptionData = async () => {
+      try {
+        const response = await fetch("/api/subscription/usage");
+        if (response.ok) {
+          const data = await response.json();
+          setSubscriptionData({
+            planType: data.planType,
+            dailyRecordingCount: data.dailyRecordingCount,
+          });
+        }
+      } catch (error) {
+        console.error("Failed to fetch subscription data:", error);
+      }
+    };
+
+    fetchSubscriptionData();
+  }, []);
 
   return (
     <div className="space-y-8">
@@ -192,6 +217,13 @@ export function CreateRoomForm() {
               </FormItem>
             )}
           />
+
+          {subscriptionData && (
+            <LimitWarning
+              planType={subscriptionData.planType}
+              dailyRecordingCount={subscriptionData.dailyRecordingCount}
+            />
+          )}
 
           <div className="flex justify-end space-x-4 pt-6 border-t border-gray-100">
             <Button
