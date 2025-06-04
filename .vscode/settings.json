@@ -1,7 +1,9 @@
 {
   "cSpell.words": [
+    "abcabcabc",
     "ABCDEFGHJKLMNPQRSTUVWXYZ",
     "Alignement",
+    "codelist",
     "cuid",
     "Deleter",
     "DOCAI",
@@ -29,8 +31,12 @@
     "rgba",
     "sonner",
     "Timelapse",
+    "titleize",
+    "totp",
     "trycloudflare",
     "turbopack",
-    "vertexai"
+    "vertexai",
+    "waitlist",
+    "zxcvbn"
   ]
 }

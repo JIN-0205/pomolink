@@ -169,7 +169,7 @@ export default function Page() {
         appearance={{
           elements: {
             commerce: {
-              billedMonthlyOnly: "Billed annuallyyyy",
+              billedMonthlyOnly: "Billed annually",
             },
           },
           variables: {

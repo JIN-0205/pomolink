@@ -59,6 +59,7 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@clerk/types": "^4.60.0",
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
     "@types/formidable": "^3.4.5",
