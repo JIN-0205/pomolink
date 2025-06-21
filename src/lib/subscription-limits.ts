@@ -1,59 +1,76 @@
-import { PlanType } from "@prisma/client";
-
-export interface PlanLimits {
-  maxDailyRecordings: number;
-  maxParticipants: number;
-  recordingRetentionDays: number;
-  price: number; // 円/月
-}
-
-export const PLAN_LIMITS: Record<PlanType, PlanLimits> = {
+export const PLAN_LIMITS = {
   FREE: {
+    maxRooms: 1,
     maxDailyRecordings: 1,
     maxParticipants: 2,
-    recordingRetentionDays: 1,
+    recordingRetentionDays: 7,
     price: 0,
   },
   BASIC: {
-    maxDailyRecordings: 3,
-    maxParticipants: 2,
-    recordingRetentionDays: 30,
-    price: 500,
-  },
-  PRO: {
+    maxRooms: 4,
     maxDailyRecordings: 6,
-    maxParticipants: 5,
-    recordingRetentionDays: 90,
-    price: 800,
+    maxParticipants: 4,
+    recordingRetentionDays: 30,
+    price: 5,
   },
-};
+  PREMIUM: {
+    maxRooms: 10,
+    maxDailyRecordings: 15,
+    maxParticipants: 10,
+    recordingRetentionDays: 90,
+    price: 8,
+  },
+} as const;
 
-export function getPlanLimits(planType: PlanType): PlanLimits {
+export type PlanType = keyof typeof PLAN_LIMITS;
+
+export function getPlanName(planType: PlanType): string {
+  const names = {
+    FREE: "フリー",
+    BASIC: "ベーシック",
+    PREMIUM: "プレミアム",
+  };
+  return names[planType];
+}
+
+export function getPlanLimits(planType: PlanType) {
   return PLAN_LIMITS[planType];
 }
 
-export function getPlanName(planType: PlanType): string {
-  switch (planType) {
-    case "FREE":
-      return "フリー";
-    case "BASIC":
-      return "ベーシック";
-    case "PRO":
-      return "プロ";
-    default:
-      return "フリー";
-  }
+export function getRoomPlanLimits(ownerPlanType: PlanType) {
+  return PLAN_LIMITS[ownerPlanType];
 }
 
-export function getPlanDescription(planType: PlanType): string {
-  switch (planType) {
-    case "FREE":
-      return "録画1日1回、保存期間1日";
-    case "BASIC":
-      return "録画1日3件、保存期間1ヶ月、パフォーマー2人";
-    case "PRO":
-      return "録画1日6件、保存期間3ヶ月、パフォーマー5人";
-    default:
-      return "";
-  }
-}
+export const PLAN_BENEFITS = {
+  FREE: {
+    name: "フリープラン",
+    price: "無料",
+    features: [
+      `ルーム作成数: ${PLAN_LIMITS.FREE.maxRooms}個まで`,
+      `録画: ${PLAN_LIMITS.FREE.maxDailyRecordings}回/日`,
+      `参加者数: ${PLAN_LIMITS.FREE.maxParticipants}人まで`,
+      `録画保存期間: ${PLAN_LIMITS.FREE.recordingRetentionDays}日間`,
+    ],
+  },
+  BASIC: {
+    name: "ベーシックプラン",
+    price: `$${PLAN_LIMITS.BASIC.price}/月`,
+    features: [
+      `ルーム作成数: ${PLAN_LIMITS.BASIC.maxRooms}個まで`,
+      `録画: ${PLAN_LIMITS.BASIC.maxDailyRecordings}回/日`,
+      `参加者数: ${PLAN_LIMITS.BASIC.maxParticipants}人まで`,
+      `録画保存期間: ${PLAN_LIMITS.BASIC.recordingRetentionDays}日間`,
+    ],
+  },
+  PREMIUM: {
+    name: "プレミアムプラン",
+    price: `$${PLAN_LIMITS.PREMIUM.price}/月`,
+    features: [
+      `ルーム作成数: ${PLAN_LIMITS.PREMIUM.maxRooms}個まで`,
+      `録画: ${PLAN_LIMITS.PREMIUM.maxDailyRecordings}回/日`,
+      `参加者数: ${PLAN_LIMITS.PREMIUM.maxParticipants}人まで`,
+      `録画保存期間: ${PLAN_LIMITS.PREMIUM.recordingRetentionDays}日間`,
+      "優先サポート",
+    ],
+  },
+} as const;

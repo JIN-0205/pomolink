@@ -55,7 +55,7 @@ export async function POST(req: Request) {
   // console.log(`Received webhook with ID ${id} and event type of ${eventType}`);
   // console.log("Webhook payload:", body);
 
-  if (evt.type === "user.created") {
+  if (evt.type === "user.created" || evt.type === "user.updated") {
     const { id, email_addresses, first_name, image_url } = evt.data;
     const email = email_addresses[0].email_address;
     try {
@@ -79,6 +79,19 @@ export async function POST(req: Request) {
     } catch (err) {
       console.error("Error upserting user:", err);
       return new Response("Error upserting user", { status: 500 });
+    }
+  }
+
+  if (evt.type === "user.deleted") {
+    const { id } = evt.data;
+    try {
+      await prisma.user.delete({
+        where: { clerkId: id },
+      });
+      return new Response("User deleted successfully", { status: 200 });
+    } catch (err) {
+      console.error("Error deleting user:", err);
+      return new Response("Error deleting user", { status: 500 });
     }
   }
 

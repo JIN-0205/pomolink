@@ -1,19 +1,6 @@
-// import prisma from "@/lib/db";
-
-// export default async function Home() {
-//   const users = await prisma.user.findMany();
-//   return (
-//     <div className="min-h-full">
-//       <h1>Welcome to the Home Page</h1>
-//       <p>This is a simple example of a Next.js application.</p>
-//       <p>Enjoy your stay!</p>
-//       <div>{JSON.stringify(users)}</div>
-//     </div>
-//   );
-// }
-"use client";
-
-import { useUser } from "@clerk/nextjs";
+import { StaticStatsCounter } from "@/components/StaticStatsCounter";
+import prisma from "@/lib/db";
+import { PublicStats } from "@/types";
 import {
   ArrowRight,
   CheckCircle,
@@ -25,15 +12,46 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 
-export default function LandingPage() {
-  // ログイン済みの場合はダッシュボードにリダイレクト
-  const { isSignedIn } = useUser();
-  if (isSignedIn) {
-    redirect("/dashboard");
+// ISR設定: 30分ごとに再生成
+export const revalidate = 30;
+
+// サーバーサイドで統計データを取得
+async function getPublicStats(): Promise<PublicStats> {
+  try {
+    console.log("[SSR] 統計データを取得中...");
+    const [totalCompletedPomodoros, totalRooms, totalUsers] = await Promise.all(
+      [
+        prisma.session.count({
+          where: {
+            completed: true,
+          },
+        }),
+        prisma.room.count(),
+        prisma.user.count(),
+      ]
+    );
+
+    const stats = {
+      totalCompletedPomodoros,
+      totalRooms,
+      totalUsers,
+    };
+
+    console.log("[SSR] 統計データ取得完了:", stats);
+    return stats;
+  } catch (error) {
+    console.error("[SSR] 統計データの取得に失敗:", error);
+    return {
+      totalCompletedPomodoros: 0,
+      totalRooms: 0,
+      totalUsers: 0,
+    };
   }
+}
 
+export default async function LandingPage() {
+  const stats = await getPublicStats();
   return (
     <div className="flex min-h-screen flex-col bg-gradient-to-br from-indigo-50 via-white to-purple-50">
       {/* ナビゲーションバー */}
@@ -127,23 +145,8 @@ export default function LandingPage() {
               </div>
 
               {/* 統計情報 */}
-              <div className="mt-16 grid grid-cols-1 gap-8 sm:grid-cols-3">
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-indigo-600">
-                    1000+
-                  </div>
-                  <div className="text-sm text-gray-500">
-                    アクティブユーザー
-                  </div>
-                </div>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-purple-600">50k+</div>
-                  <div className="text-sm text-gray-500">完了ポモドーロ</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-pink-600">200+</div>
-                  <div className="text-sm text-gray-500">アクティブルーム</div>
-                </div>
+              <div className="mt-16">
+                <StaticStatsCounter initialStats={stats} />
               </div>
             </div>
           </div>

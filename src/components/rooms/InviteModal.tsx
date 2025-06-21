@@ -135,8 +135,18 @@ export function InviteModal({ roomId, open, onClose }: InviteModalProps) {
       }
 
       if (!response.ok) {
+        // 参加者数制限の場合は特別な処理
+        if (responseData?.error === "参加者数の上限に達しています") {
+          throw new Error(
+            "参加者数の上限に達しています。プランをアップグレードするか、既存の参加者を削除してから招待してください。"
+          );
+        }
+
         throw new Error(
-          responseData?.message || responseText || "招待の送信に失敗しました"
+          responseData?.error ||
+            responseData?.message ||
+            responseText ||
+            "招待の送信に失敗しました"
         );
       }
 

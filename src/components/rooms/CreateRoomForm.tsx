@@ -1,6 +1,5 @@
 "use client";
 
-import { LimitWarning } from "@/components/subscription/LimitWarning";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -18,10 +17,20 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { PlanType } from "@prisma/client";
 import { Loader2, Lock, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
+import { SubscriptionLimitModal } from "../subscription/SubscriptionLimitModal";
+
+interface LimitError {
+  error: string;
+  code: string;
+  currentCount: number;
+  maxCount: number;
+  planType: PlanType;
+  needsUpgrade: boolean;
+}
 
 const formSchema = z.object({
   name: z
@@ -37,10 +46,8 @@ const formSchema = z.object({
 
 export function CreateRoomForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [subscriptionData, setSubscriptionData] = useState<{
-    planType: PlanType;
-    dailyRecordingCount: number;
-  } | null>(null);
+  const [showLimitModal, setShowLimitModal] = useState(false);
+  const [limitError, setLimitError] = useState<LimitError | null>(null);
   const router = useRouter();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -63,6 +70,14 @@ export function CreateRoomForm() {
         },
         body: JSON.stringify(values),
       });
+      if (response.status === 403) {
+        const errorData: LimitError = await response.json();
+        if (errorData.code === "ROOM_CREATION_LIMIT_EXCEEDED") {
+          setLimitError(errorData);
+          setShowLimitModal(true);
+          return;
+        }
+      }
 
       if (!response.ok) {
         const error = await response.json();
@@ -85,25 +100,10 @@ export function CreateRoomForm() {
       setIsSubmitting(false);
     }
   };
-
-  useEffect(() => {
-    const fetchSubscriptionData = async () => {
-      try {
-        const response = await fetch("/api/subscription/usage");
-        if (response.ok) {
-          const data = await response.json();
-          setSubscriptionData({
-            planType: data.planType,
-            dailyRecordingCount: data.dailyRecordingCount,
-          });
-        }
-      } catch (error) {
-        console.error("Failed to fetch subscription data:", error);
-      }
-    };
-
-    fetchSubscriptionData();
-  }, []);
+  const handleUpgrade = () => {
+    setShowLimitModal(false);
+    router.push("/pricing");
+  };
 
   return (
     <div className="space-y-8">
@@ -218,13 +218,6 @@ export function CreateRoomForm() {
             )}
           />
 
-          {subscriptionData && (
-            <LimitWarning
-              planType={subscriptionData.planType}
-              dailyRecordingCount={subscriptionData.dailyRecordingCount}
-            />
-          )}
-
           <div className="flex justify-end space-x-4 pt-6 border-t border-gray-100">
             <Button
               type="button"
@@ -247,6 +240,17 @@ export function CreateRoomForm() {
           </div>
         </form>
       </Form>
+      {limitError && (
+        <SubscriptionLimitModal
+          isOpen={showLimitModal}
+          onClose={() => setShowLimitModal(false)}
+          limitType="ROOM_CREATION"
+          currentPlan={limitError.planType}
+          currentCount={limitError.currentCount}
+          maxCount={limitError.maxCount}
+          onUpgrade={handleUpgrade}
+        />
+      )}
     </div>
   );
 }

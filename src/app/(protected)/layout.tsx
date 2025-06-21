@@ -10,6 +10,7 @@ import {
   ListTodo,
   LogOut,
   Menu,
+  Receipt,
   Settings,
   User,
   Users,
@@ -57,26 +58,33 @@ export default function ProtectedLayout({
       active: pathname?.startsWith("/tasks"),
     },
     {
-      href: "/media-test/webCodecs",
-      label: "WebCodecs",
-      icon: Clock,
-      active: pathname?.startsWith("/media-test/webCodecs"),
+      href: "/pricing",
+      label: "サブスクリプション",
+      icon: Receipt,
+      active: pathname?.startsWith("/pricing"),
     },
-    {
-      href: "/media-test",
-      label: "Media Test",
-      icon: Clock,
-      active:
-        pathname?.startsWith("/media-test") &&
-        !pathname?.startsWith("/media-test/webCodecs") &&
-        !pathname?.startsWith("/media-test/ImageAnalyzer"),
-    },
-    {
-      href: "/media-test/ImageAnalyzer",
-      label: "Image Analyzer",
-      icon: Clock,
-      active: pathname?.startsWith("/media-test/ImageAnalyzer"),
-    },
+
+    // {
+    //   href: "/media-test/webCodecs",
+    //   label: "WebCodecs",
+    //   icon: Clock,
+    //   active: pathname?.startsWith("/media-test/webCodecs"),
+    // },
+    // {
+    //   href: "/media-test",
+    //   label: "Media Test",
+    //   icon: Clock,
+    //   active:
+    //     pathname?.startsWith("/media-test") &&
+    //     !pathname?.startsWith("/media-test/webCodecs") &&
+    //     !pathname?.startsWith("/media-test/ImageAnalyzer"),
+    // },
+    // {
+    //   href: "/media-test/ImageAnalyzer",
+    //   label: "Image Analyzer",
+    //   icon: Clock,
+    //   active: pathname?.startsWith("/media-test/ImageAnalyzer"),
+    // },
   ];
 
   if (!isLoaded || !isSignedIn || !userId) {

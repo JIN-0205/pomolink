@@ -1,71 +1,3 @@
-// // src/app/api/rooms/join/route.ts
-// import prisma from "@/lib/db";
-// import { auth } from "@clerk/nextjs/server";
-// import { NextRequest, NextResponse } from "next/server";
-
-// export async function POST(req: NextRequest) {
-//   try {
-//     const { userId } = await auth();
-//     if (!userId) {
-//       return new NextResponse("認証が必要です", { status: 401 });
-//     }
-
-//     const user = await prisma.user.findUnique({
-//       where: { clerkId: userId },
-//     });
-
-//     if (!user) {
-//       return new NextResponse("ユーザーが見つかりません", { status: 404 });
-//     }
-
-//     const { inviteCode } = await req.json();
-
-//     if (!inviteCode) {
-//       return new NextResponse("招待コードが必要です", { status: 400 });
-//     }
-
-//     // 招待コードでルームを検索
-//     const room = await prisma.room.findUnique({
-//       where: { inviteCode },
-//       include: {
-//         participants: {
-//           where: { userId: user.id },
-//         },
-//       },
-//     });
-
-//     if (!room) {
-//       return new NextResponse("無効な招待コードです", { status: 404 });
-//     }
-
-//     // すでに参加しているか確認
-//     if (room.participants.length > 0) {
-//       return NextResponse.json({
-//         roomId: room.id,
-//         alreadyJoined: true,
-//       });
-//     }
-
-//     // ルームに参加者として追加
-//     await prisma.roomParticipant.create({
-//       data: {
-//         userId: user.id,
-//         roomId: room.id,
-//         role: "PERFORMER", // デフォルトはパフォーマー
-//         joinedAt: new Date(),
-//       },
-//     });
-
-//     return NextResponse.json({
-//       roomId: room.id,
-//       success: true,
-//     });
-//   } catch (error) {
-//     console.error("[ROOM_JOIN]", error);
-//     return new NextResponse("内部エラー", { status: 500 });
-//   }
-// }
-
 import prisma from "@/lib/db";
 import { adminApp } from "@/lib/firebase-admin";
 import { canAddParticipant } from "@/lib/subscription-service";
@@ -188,6 +120,7 @@ async function handleJoinRoom(
     return NextResponse.json(
       {
         error: "参加者数の上限に達しています",
+        code: "PARTICIPANT_LIMIT_EXCEEDED",
         currentCount: participantCheck.currentCount,
         maxCount: participantCheck.maxCount,
         planType: participantCheck.planType,

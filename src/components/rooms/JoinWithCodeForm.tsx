@@ -66,19 +66,31 @@ export function JoinWithCodeForm({
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        let errorMessage = "参加に失敗しました";
-
         try {
-          // JSONとしてパースできるか試す
-          const errorData = JSON.parse(errorText);
-          errorMessage = errorData.message || errorText;
-        } catch {
-          // テキストのままエラーメッセージとして使用
-          errorMessage = errorText;
-        }
+          const errorData = await response.json();
 
-        throw new Error(errorMessage);
+          // 参加者数制限の場合は特別なメッセージを表示
+          if (errorData.code === "PARTICIPANT_LIMIT_EXCEEDED") {
+            throw new Error(
+              "参加者数の上限に達しています。ルームオーナーにプランのアップグレードを依頼してください。"
+            );
+          }
+
+          throw new Error(errorData.error || "参加に失敗しました");
+        } catch (jsonError) {
+          // JSONパースに失敗した場合
+          if (
+            jsonError instanceof Error &&
+            jsonError.message.includes("参加者数の上限")
+          ) {
+            throw jsonError; // 上で作成したエラーメッセージをそのまま使用
+          }
+
+          // その他のエラーの場合は元のレスポンスを複製して読み込み
+          const responseClone = response.clone();
+          const errorText = await responseClone.text();
+          throw new Error(errorText || "参加に失敗しました");
+        }
       }
 
       const data = await response.json();

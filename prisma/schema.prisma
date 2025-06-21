@@ -56,9 +56,6 @@ model User {
   // タスク提案
   taskProposals TaskProposal[]
 
-  // サブスクリプション情報
-  subscription Subscription?
-
   dailyReports DailyReport[]
 
   sessions Session[]
@@ -66,6 +63,14 @@ model User {
 
   pointHistory   PointHistory[]
   recordingUsage RecordingUsage[]
+
+  planType PlanType @default(FREE)
+}
+
+enum PlanType {
+  FREE
+  BASIC
+  PREMIUM
 }
 
 // ルームモデル
@@ -246,35 +251,6 @@ model DailyReport {
   sessions  Session[]
   uploads   Upload[]
   createdAt DateTime  @default(now())
-}
-
-model Subscription {
-  id                     String    @id @default(cuid())
-  userId                 String    @unique
-  user                   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  stripeCustomerId       String?   @unique
-  stripeSubscriptionId   String?   @unique
-  stripePriceId          String?
-  stripeCurrentPeriodEnd DateTime?
-  planType               PlanType  @default(FREE)
-
-  // プラン別の制限設定
-  maxDailyRecordings     Int @default(1) // 1日の最大録画数
-  maxParticipants        Int @default(2) // 最大参加者数
-  recordingRetentionDays Int @default(1) // 録画保存期間（日）
-
-  // 従来の設定
-  maxRoomMembers         Int  @default(3)
-  historyRetentionMonths Int? // ポイント履歴保存月数（例: FREE=3, PRO=null(無制限)など）
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-enum PlanType {
-  FREE
-  BASIC
-  PRO
 }
 
 model PointHistory {

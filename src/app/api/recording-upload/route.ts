@@ -17,21 +17,6 @@ export async function POST(req: NextRequest) {
     if (!user)
       return new NextResponse("ユーザーが見つかりません", { status: 404 });
 
-    // 録画制限をチェック
-    const recordingCheck = await canRecord(user.id);
-    if (!recordingCheck.canRecord) {
-      return NextResponse.json(
-        {
-          error: "録画制限に達しました",
-          currentCount: recordingCheck.currentCount,
-          maxCount: recordingCheck.maxCount,
-          planType: recordingCheck.planType,
-          needsUpgrade: true,
-        },
-        { status: 403 }
-      );
-    }
-
     // multipart/form-dataのパース
     const formData = await req.formData();
     const file = formData.get("file") as File;
@@ -44,40 +29,80 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // ファイルサイズ制限（100MB）
-    const maxFileSize = 100 * 1024 * 1024; // 100MB
-    if (file.size > maxFileSize) {
+    // セッションの存在確認とルーム情報取得
+    const session = await prisma.session.findUnique({
+      where: { id: sessionId },
+      include: {
+        task: {
+          include: {
+            room: true,
+          },
+        },
+      },
+    });
+
+    if (!session) {
+      return new NextResponse("セッションが見つかりません", { status: 404 });
+    }
+
+    if (session.userId !== user.id) {
+      return new NextResponse("権限がありません", { status: 403 });
+    }
+
+    // 録画制限チェック
+    const recordingCheck = await canRecord(session.task.room.id, user.id);
+    if (!recordingCheck.canRecord) {
       return NextResponse.json(
-        { error: "ファイルサイズが大きすぎます（最大100MB）" },
-        { status: 413 }
+        {
+          error: "録画制限に達しました",
+          code: "RECORDING_LIMIT_EXCEEDED",
+          currentCount: recordingCheck.currentCount,
+          maxCount: recordingCheck.maxCount,
+          planType: recordingCheck.planType,
+        },
+        { status: 403 }
       );
     }
 
+    // ファイルサイズ制限チェック (100MB)
+    const maxFileSize = 100 * 1024 * 1024;
+    if (file.size > maxFileSize) {
+      return new NextResponse("ファイルサイズが大きすぎます (最大100MB)", {
+        status: 413,
+      });
+    }
+
+    // Firebase Storageにアップロード
     const bucket = getStorage().bucket();
-    const ext = file.name.split(".").pop() || "webm";
-    const filename = `recordings/${user.id}/${uuidv4()}.${ext}`;
+    const fileName = `recordings/${user.id}/${sessionId}/${uuidv4()}.webm`;
+    const fileRef = bucket.file(fileName);
 
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
-    const fileRef = bucket.file(filename);
 
     await fileRef.save(buffer, {
-      contentType: file.type || "video/webm",
-      public: false,
+      metadata: {
+        contentType: file.type,
+        metadata: {
+          sessionId: sessionId,
+          userId: user.id,
+          originalName: file.name,
+        },
+      },
     });
 
-    // サイン付きURLを生成（1年有効）
+    // 公開URLを取得
     const [fileUrl] = await fileRef.getSignedUrl({
       action: "read",
-      expires: Date.now() + 365 * 24 * 60 * 60 * 1000,
+      expires: "01-01-2030",
     });
 
-    // セッションに録画URLを保存
-    const session = await prisma.session.update({
+    // セッションを更新
+    const updatedSession = await prisma.session.update({
       where: { id: sessionId },
       data: {
         recordingUrl: fileUrl,
-        recordingDuration: duration ? parseInt(duration as string) : null,
+        recordingDuration: duration ? parseInt(duration.toString()) : null,
       },
     });
 
@@ -86,40 +111,15 @@ export async function POST(req: NextRequest) {
       user.id,
       sessionId,
       file.size,
-      duration ? parseInt(duration as string) : undefined
+      duration ? parseInt(duration.toString()) : undefined
     );
 
     return NextResponse.json({
-      success: true,
-      recordingUrl: fileUrl,
-      session,
-      usage: {
-        currentCount: recordingCheck.currentCount + 1,
-        maxCount: recordingCheck.maxCount,
-        planType: recordingCheck.planType,
-      },
+      message: "録画アップロード成功",
+      session: updatedSession,
     });
   } catch (error) {
     console.error("[RECORDING_UPLOAD_POST]", error);
     return new NextResponse("録画アップロード失敗", { status: 500 });
-  }
-}
-
-// 録画制限の確認用エンドポイント
-export async function GET() {
-  try {
-    const { userId: clerkId } = await auth();
-    if (!clerkId) return new NextResponse("未認証", { status: 401 });
-
-    const user = await prisma.user.findUnique({ where: { clerkId } });
-    if (!user)
-      return new NextResponse("ユーザーが見つかりません", { status: 404 });
-
-    const recordingCheck = await canRecord(user.id);
-
-    return NextResponse.json(recordingCheck);
-  } catch (error) {
-    console.error("[RECORDING_UPLOAD_GET]", error);
-    return new NextResponse("録画制限確認失敗", { status: 500 });
   }
 }

@@ -1,171 +1,126 @@
-// import { Badge } from "@/components/ui/badge";
-// import { Button } from "@/components/ui/button";
-// import {
-//   Card,
-//   CardContent,
-//   CardDescription,
-//   CardFooter,
-//   CardHeader,
-//   CardTitle,
-// } from "@/components/ui/card";
-// import {
-//   PLAN_LIMITS,
-//   getPlanDescription,
-//   getPlanName,
-// } from "@/lib/subscription-limits";
-// import { PlanType } from "@prisma/client";
-// import { Calendar, Check, Crown, Users, Video } from "lucide-react";
+"use client";
 
-// const plans: Array<{
-//   type: PlanType;
-//   popular?: boolean;
-//   features: string[];
-// }> = [
-//   {
-//     type: "FREE",
-//     features: [
-//       "録画機能 1日1回",
-//       "保存期間 1日",
-//       "参加者 2人まで",
-//       "基本的なタスク管理",
-//     ],
-//   },
-//   {
-//     type: "BASIC",
-//     popular: true,
-//     features: [
-//       "録画機能 1日3件",
-//       "保存期間 1ヶ月",
-//       "参加者 2人まで",
-//       "高度なタスク管理",
-//       "メール通知",
-//     ],
-//   },
-//   {
-//     type: "PRO",
-//     features: [
-//       "録画機能 1日6件",
-//       "保存期間 3ヶ月",
-//       "参加者 5人まで",
-//       "すべての機能",
-//       "優先サポート",
-//       "データエクスポート",
-//     ],
-//   },
-// ];
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { PlanType } from "@/lib/subscription-limits";
+import { PricingTable, useUser } from "@clerk/nextjs";
+import { Loader2, RefreshCw } from "lucide-react";
+import { useEffect, useState } from "react";
 
-// export default async function PricingPage() {
-//   return (
-//     <div className="container mx-auto px-4 py-8">
-//       <div className="text-center mb-8">
-//         <h1 className="text-3xl font-bold mb-2">料金プラン</h1>
-//         <p className="text-muted-foreground">
-//           あなたのチームに最適なプランを選択してください
-//         </p>
-//       </div>
-
-//       <div className="grid gap-6 md:grid-cols-3 max-w-6xl mx-auto">
-//         {plans.map((plan) => {
-//           const limits = PLAN_LIMITS[plan.type];
-//           const isPopular = plan.popular;
-
-//           return (
-//             <Card
-//               key={plan.type}
-//               className={`relative ${
-//                 isPopular ? "border-primary shadow-lg scale-105" : ""
-//               }`}
-//             >
-//               {isPopular && (
-//                 <Badge className="absolute -top-2 left-1/2 transform -translate-x-1/2">
-//                   <Crown className="w-3 h-3 mr-1" />
-//                   人気
-//                 </Badge>
-//               )}
-
-//               <CardHeader className="text-center">
-//                 <CardTitle className="text-2xl">
-//                   {getPlanName(plan.type)}
-//                 </CardTitle>
-//                 <CardDescription>
-//                   {getPlanDescription(plan.type)}
-//                 </CardDescription>
-//                 <div className="mt-4">
-//                   {plan.type === "FREE" ? (
-//                     <div className="text-3xl font-bold">無料</div>
-//                   ) : (
-//                     <div>
-//                       <span className="text-3xl font-bold">
-//                         ¥{limits.price}
-//                       </span>
-//                       <span className="text-muted-foreground">/月</span>
-//                     </div>
-//                   )}
-//                 </div>
-//               </CardHeader>
-
-//               <CardContent className="space-y-4">
-//                 <div className="grid gap-2 text-sm">
-//                   <div className="flex items-center gap-2">
-//                     <Video className="h-4 w-4 text-muted-foreground" />
-//                     <span>録画 {limits.maxDailyRecordings}件/日</span>
-//                   </div>
-//                   <div className="flex items-center gap-2">
-//                     <Users className="h-4 w-4 text-muted-foreground" />
-//                     <span>参加者 {limits.maxParticipants}人まで</span>
-//                   </div>
-//                   <div className="flex items-center gap-2">
-//                     <Calendar className="h-4 w-4 text-muted-foreground" />
-//                     <span>保存期間 {limits.recordingRetentionDays}日</span>
-//                   </div>
-//                 </div>
-
-//                 <div className="border-t pt-4">
-//                   <ul className="space-y-2">
-//                     {plan.features.map((feature, index) => (
-//                       <li
-//                         key={index}
-//                         className="flex items-center gap-2 text-sm"
-//                       >
-//                         <Check className="h-4 w-4 text-green-500 flex-shrink-0" />
-//                         <span>{feature}</span>
-//                       </li>
-//                     ))}
-//                   </ul>
-//                 </div>
-//               </CardContent>
-
-//               <CardFooter>
-//                 <Button
-//                   className="w-full"
-//                   variant={isPopular ? "default" : "outline"}
-//                   disabled={plan.type === "FREE"}
-//                 >
-//                   {plan.type === "FREE"
-//                     ? "現在のプラン"
-//                     : `${getPlanName(plan.type)}を選択`}
-//                 </Button>
-//               </CardFooter>
-//             </Card>
-//           );
-//         })}
-//       </div>
-
-//       <div className="text-center mt-8 text-sm text-muted-foreground">
-//         <p>すべてのプランに30日間の無料トライアルが含まれています</p>
-//         <p>いつでもキャンセル可能です</p>
-//       </div>
-//     </div>
-//   );
-// }
-import { PricingTable } from "@clerk/nextjs";
+interface PlanInfo {
+  planType: PlanType;
+  planName: string;
+  planLimits: {
+    maxRooms: number;
+    maxDailyRecordings: number;
+    maxParticipants: number;
+    recordingRetentionDays: number;
+    price: number;
+  };
+}
 
 export default function Page() {
+  const { user, isLoaded } = useUser();
+  const [planInfo, setPlanInfo] = useState<PlanInfo | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const fetchPlanInfo = async (showRefreshState = false) => {
+    if (showRefreshState) {
+      setIsRefreshing(true);
+    } else {
+      setIsLoading(true);
+    }
+
+    try {
+      const response = await fetch("/api/subscription/plan");
+      console.log(
+        "\u001b[35m" + "Fetching plan info from /api/subscription/plan"
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setPlanInfo(data);
+      } else {
+        console.error("Failed to fetch plan info:", response.statusText);
+      }
+    } catch (error) {
+      console.error("Error fetching plan info:", error);
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isLoaded && user) {
+      fetchPlanInfo();
+    }
+  }, [isLoaded, user]);
+
+  const handleRefresh = () => {
+    fetchPlanInfo(true);
+  };
+
+  // Clerkの権限チェック（フォールバック用）
+  const hasPremiumAccess =
+    user?.hasVerifiedEmailAddress &&
+    user?.publicMetadata?.plan === "premium_user";
+  const hasBasicAccess =
+    user?.hasVerifiedEmailAddress &&
+    user?.publicMetadata?.plan === "basic_user";
+
   return (
     <div style={{ maxWidth: "800px", margin: "0 auto", padding: "0 1rem" }}>
-      <PricingTable
-        // localization={{ en: customLocalization }}
+      {/* プラン情報表示セクション */}
+      <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-lg font-semibold">現在のプラン</h2>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="gap-2"
+          >
+            <RefreshCw
+              className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
+            />
+            更新
+          </Button>
+        </div>
 
+        {isLoading ? (
+          <div className="flex items-center gap-2 text-gray-600">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            プラン情報を読み込み中...
+          </div>
+        ) : planInfo ? (
+          <div className="flex items-center gap-3">
+            <Badge
+              variant={
+                planInfo.planType === "PREMIUM"
+                  ? "default"
+                  : planInfo.planType === "BASIC"
+                    ? "secondary"
+                    : "outline"
+              }
+            >
+              {planInfo.planName}プラン
+            </Badge>
+            <div className="text-sm text-gray-600">
+              ルーム: {planInfo.planLimits.maxRooms}個 | 参加者:{" "}
+              {planInfo.planLimits.maxParticipants}人 | 録画:{" "}
+              {planInfo.planLimits.maxDailyRecordings}回/日
+            </div>
+          </div>
+        ) : (
+          <div className="text-gray-600">プラン情報を取得できませんでした</div>
+        )}
+      </div>
+
+      {/* Clerk PricingTable */}
+      <PricingTable
+        newSubscriptionRedirectUrl="/pricing/success"
         appearance={{
           elements: {
             commerce: {
@@ -179,6 +134,64 @@ export default function Page() {
           },
         }}
       />
+
+      {/* プラン別メッセージ */}
+      {planInfo ? (
+        <div className="mt-6">
+          {planInfo.planType === "PREMIUM" ? (
+            <div className="text-center p-4 bg-purple-50 rounded-lg border border-purple-200">
+              <p className="text-purple-800 font-medium">
+                🎉 Premiumプランの全機能をお楽しみください！
+              </p>
+              <p className="text-purple-600 text-sm mt-1">
+                最大{planInfo.planLimits.maxParticipants}人での協働、
+                {planInfo.planLimits.maxDailyRecordings}回/日の録画が可能です
+              </p>
+            </div>
+          ) : planInfo.planType === "BASIC" ? (
+            <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <p className="text-blue-800 font-medium">
+                ⭐ Basicプランをご利用中です
+              </p>
+              <p className="text-blue-600 text-sm mt-1">
+                より多くの機能をお求めの場合は、Premiumプランをご検討ください
+              </p>
+            </div>
+          ) : (
+            <div className="text-center p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <p className="text-gray-800 font-medium">
+                無料プランをご利用中です
+              </p>
+              <p className="text-gray-600 text-sm mt-1">
+                より多くの機能とストレージ容量をお楽しみいただくために、有料プランをご検討ください
+              </p>
+            </div>
+          )}
+        </div>
+      ) : (
+        // フォールバック表示（Clerkの権限情報を使用）
+        <div className="mt-6">
+          {hasPremiumAccess ? (
+            <div className="text-center p-4 bg-purple-50 rounded-lg">
+              <p className="text-purple-800">
+                Premiumプランの機能をお楽しみください。
+              </p>
+            </div>
+          ) : hasBasicAccess ? (
+            <div className="text-center p-4 bg-blue-50 rounded-lg">
+              <p className="text-blue-800">
+                Basicプランの機能をお楽しみください。
+              </p>
+            </div>
+          ) : (
+            <div className="text-center p-4 bg-gray-50 rounded-lg">
+              <p className="text-gray-800">
+                プランを選択して、機能をアンロックしてください。
+              </p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

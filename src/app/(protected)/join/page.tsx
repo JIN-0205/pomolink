@@ -1,6 +1,7 @@
 "use client";
 
 import { JoinWithCodeForm } from "@/components/rooms/JoinWithCodeForm";
+import { SubscriptionLimitModal } from "@/components/subscription/SubscriptionLimitModal";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,7 +13,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { PlanType } from "@prisma/client";
 import { Info, Loader2, Users, X } from "lucide-react";
+
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -38,6 +41,15 @@ export default function JoinPage() {
   const [roomInfo, setRoomInfo] = useState<RoomInfo | null>(null);
   const [isLoading, setIsLoading] = useState(!!inviteCode);
   const [error, setError] = useState<string | null>(null);
+
+  const [limitModal, setLimitModal] = useState({
+    isOpen: false,
+    limitType: "PARTICIPANT" as const,
+    currentPlan: PlanType.FREE,
+    currentCount: 0,
+    maxCount: 0,
+    roomOwnerName: "",
+  });
 
   // URLに招待コードがある場合はルーム情報を取得
   useEffect(() => {
@@ -98,8 +110,30 @@ export default function JoinPage() {
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || "ルームへの参加に失敗しました");
+        try {
+          const errorData = await response.json();
+
+          // 参加者数制限の場合
+          if (errorData.code === "PARTICIPANT_LIMIT_EXCEEDED") {
+            setLimitModal({
+              isOpen: true,
+              limitType: "PARTICIPANT",
+              currentPlan: errorData.planType || PlanType.FREE,
+              currentCount: errorData.currentCount || 0,
+              maxCount: errorData.maxCount || 0,
+              roomOwnerName: roomInfo.creator.name,
+            });
+            return;
+          }
+
+          // その他のエラー
+          throw new Error(errorData.error || "ルームへの参加に失敗しました");
+        } catch {
+          // JSONパースに失敗した場合、元のレスポンスを複製して読み込み
+          const responseClone = response.clone();
+          const errorText = await responseClone.text();
+          throw new Error(errorText || "ルームへの参加に失敗しました");
+        }
       }
 
       const data = await response.json();
@@ -252,17 +286,51 @@ export default function JoinPage() {
             </Button>
           </CardFooter>
         </Card>
+
+        {/* 参加者数制限モーダル */}
+        <SubscriptionLimitModal
+          isOpen={limitModal.isOpen}
+          onClose={() => setLimitModal((prev) => ({ ...prev, isOpen: false }))}
+          limitType={limitModal.limitType}
+          currentPlan={limitModal.currentPlan}
+          currentCount={limitModal.currentCount}
+          maxCount={limitModal.maxCount}
+          userRole="PERFORMER"
+          roomOwnerName={limitModal.roomOwnerName}
+          onUpgrade={() => {
+            setLimitModal((prev) => ({ ...prev, isOpen: false }));
+            router.push("/pricing");
+          }}
+        />
       </div>
     );
   }
 
   // 通常のフォーム表示（URLに招待コードがない場合）
   return (
-    <div className="container py-12">
-      <h1 className="text-2xl font-bold text-center mb-6">
-        招待コードでルームに参加
-      </h1>
-      <JoinWithCodeForm />
-    </div>
+    <>
+      <div className="container py-12">
+        <h1 className="text-2xl font-bold text-center mb-6">
+          招待コードでルームに参加
+        </h1>
+        <JoinWithCodeForm />
+      </div>
+
+      {/* 参加者数制限モーダル */}
+      <SubscriptionLimitModal
+        isOpen={limitModal.isOpen}
+        onClose={() => setLimitModal((prev) => ({ ...prev, isOpen: false }))}
+        limitType={limitModal.limitType}
+        currentPlan={limitModal.currentPlan}
+        currentCount={limitModal.currentCount}
+        maxCount={limitModal.maxCount}
+        userRole="PERFORMER"
+        roomOwnerName={limitModal.roomOwnerName}
+        onUpgrade={() => {
+          setLimitModal((prev) => ({ ...prev, isOpen: false }));
+          router.push("/pricing");
+        }}
+      />
+    </>
   );
 }

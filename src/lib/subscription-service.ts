@@ -1,4 +1,6 @@
+import { auth } from "@clerk/nextjs/server";
 import { PlanType, PrismaClient } from "@prisma/client";
+import { NextRequest, NextResponse } from "next/server";
 import { getPlanLimits } from "./subscription-limits";
 
 const prisma = new PrismaClient();
@@ -6,25 +8,56 @@ const prisma = new PrismaClient();
 /**
  * ユーザーの現在のプランを取得
  */
-export async function getUserPlan(userId: string): Promise<PlanType> {
-  const subscription = await prisma.subscription.findUnique({
-    where: { userId },
-  });
-
-  return subscription?.planType || "FREE";
+export async function getUserSubscription(): Promise<PlanType> {
+  const { has } = await auth();
+  if (has({ plan: "premium_user" })) {
+    return PlanType.PREMIUM;
+  }
+  if (has({ plan: "basic_user" })) {
+    return PlanType.BASIC;
+  }
+  return PlanType.FREE;
 }
 
 /**
- * ユーザーのサブスクリプション情報を取得
+ * ルームの作成者のプランを取得
  */
-export async function getUserSubscription(userId: string) {
-  return await prisma.subscription.findUnique({
-    where: { userId },
+export async function getRoomPlan(roomId: string): Promise<PlanType> {
+  const roomCreatorId = await prisma.room.findUnique({
+    where: { id: roomId },
   });
+  const roomCreatorPlan = await prisma.user.findUnique({
+    where: { id: roomCreatorId?.creatorId || "" },
+  });
+  return roomCreatorPlan?.planType || PlanType.FREE;
 }
 
 /**
- * 今日の録画数をチェック
+ * ルーム作成可能かチェック
+ */
+export async function canCreateRoom(userId: string): Promise<{
+  canCreate: boolean;
+  currentCount: number;
+  maxCount: number;
+  planType: PlanType;
+}> {
+  const planType = await getUserSubscription();
+  const limits = getPlanLimits(planType);
+
+  const currentCount = await prisma.room.count({
+    where: { creatorId: userId },
+  });
+
+  return {
+    canCreate: currentCount < limits.maxRooms,
+    currentCount,
+    maxCount: limits.maxRooms,
+    planType,
+  };
+}
+
+/**
+ * 日次録画回数を取得
  */
 export async function getDailyRecordingCount(userId: string): Promise<number> {
   const today = new Date();
@@ -46,15 +79,18 @@ export async function getDailyRecordingCount(userId: string): Promise<number> {
 }
 
 /**
- * 録画制限をチェック
+ * 録画可能かチェック
  */
-export async function canRecord(userId: string): Promise<{
+export async function canRecord(
+  roomId: string,
+  userId: string
+): Promise<{
   canRecord: boolean;
   currentCount: number;
   maxCount: number;
   planType: PlanType;
 }> {
-  const planType = await getUserPlan(userId);
+  const planType = await getRoomPlan(roomId);
   const limits = getPlanLimits(planType);
   const currentCount = await getDailyRecordingCount(userId);
 
@@ -67,18 +103,25 @@ export async function canRecord(userId: string): Promise<{
 }
 
 /**
- * ルーム参加者数制限をチェック
+ * 参加者追加可能かチェック
  */
 export async function canAddParticipant(
   roomId: string,
-  plannerId: string
+  plannerId?: string
 ): Promise<{
   canAdd: boolean;
   currentCount: number;
   maxCount: number;
   planType: PlanType;
 }> {
-  const planType = await getUserPlan(plannerId);
+  // プランナーIDが指定されている場合はそのプランを使用、そうでなければルームのプランを使用
+  let planType: PlanType;
+  if (plannerId) {
+    planType = await getUserSubscriptionById(plannerId);
+  } else {
+    planType = await getRoomPlan(roomId);
+  }
+
   const limits = getPlanLimits(planType);
 
   const currentCount = await prisma.roomParticipant.count({
@@ -113,87 +156,178 @@ export async function recordRecordingUsage(
 }
 
 /**
- * 古い録画を削除（保存期間を過ぎたもの）
+ * 統一的な制限チェッカー
  */
-export async function cleanupExpiredRecordings() {
-  const subscriptions = await prisma.subscription.findMany({
-    include: { user: true },
-  });
+export async function checkSubscriptionLimits(userId: string, roomId?: string) {
+  const userPlan = await getUserSubscription();
+  const roomPlan = roomId ? await getRoomPlan(roomId) : userPlan;
 
-  for (const subscription of subscriptions) {
-    const limits = getPlanLimits(subscription.planType);
-    const expirationDate = new Date();
-    expirationDate.setDate(
-      expirationDate.getDate() - limits.recordingRetentionDays
-    );
+  return {
+    userPlan,
+    roomPlan,
+    canCreateRoom: await canCreateRoom(userId),
+    canRecord: roomId ? await canRecord(roomId, userId) : null,
+    canAddParticipant: roomId ? await canAddParticipant(roomId) : null,
+  };
+}
 
-    // 期限切れの録画使用量レコードを取得
-    const expiredRecordings = await prisma.recordingUsage.findMany({
-      where: {
-        userId: subscription.userId,
-        date: {
-          lt: expirationDate,
-        },
-      },
-      include: {
-        session: true,
+/**
+ * 指定されたユーザーIDのサブスクリプションプランを取得
+ */
+export async function getUserSubscriptionById(
+  userId: string
+): Promise<PlanType> {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        planType: true,
       },
     });
 
-    // 関連するセッションの録画URLを削除
-    for (const recording of expiredRecordings) {
-      if (recording.session?.recordingUrl) {
-        // TODO: Firebase Storageからファイルを削除
-        await prisma.session.update({
-          where: { id: recording.sessionId || "" },
-          data: { recordingUrl: null, recordingDuration: null },
-        });
-      }
+    if (!user) {
+      console.warn(`User not found: ${userId}`);
+      return PlanType.FREE;
     }
 
-    // 録画使用量レコードを削除
-    await prisma.recordingUsage.deleteMany({
-      where: {
-        userId: subscription.userId,
-        date: {
-          lt: expirationDate,
-        },
-      },
+    return user.planType || PlanType.FREE;
+  } catch (error) {
+    console.error("Error getting user subscription by ID:", error);
+    return PlanType.FREE;
+  }
+}
+
+// ミドルウェア関数群
+
+/**
+ * ミドルウェア関数: 録画制限チェック
+ */
+export async function withRecordingLimitCheck(
+  request: NextRequest,
+  handler: (request: NextRequest) => Promise<NextResponse>,
+  roomId: string
+) {
+  try {
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { clerkId: userId },
     });
+
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    const recordingCheck = await canRecord(roomId, user.id);
+
+    if (!recordingCheck.canRecord) {
+      return NextResponse.json(
+        {
+          error: "録画制限に達しました",
+          code: "RECORDING_LIMIT_EXCEEDED",
+          currentCount: recordingCheck.currentCount,
+          maxCount: recordingCheck.maxCount,
+          planType: recordingCheck.planType,
+        },
+        { status: 403 }
+      );
+    }
+
+    return handler(request);
+  } catch (error) {
+    console.error("Recording limit check failed:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }
 
 /**
- * プランのアップグレード/ダウングレード
+ * ミドルウェア関数: ルーム作成制限チェック
  */
-export async function updateUserPlan(
-  userId: string,
-  newPlanType: PlanType,
-  stripeData?: {
-    stripeCustomerId?: string;
-    stripeSubscriptionId?: string;
-    stripePriceId?: string;
-    stripeCurrentPeriodEnd?: Date;
-  }
+export async function withRoomCreationLimitCheck(
+  request: NextRequest,
+  handler: (request: NextRequest) => Promise<NextResponse>
 ) {
-  const limits = getPlanLimits(newPlanType);
+  try {
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-  return await prisma.subscription.upsert({
-    where: { userId },
-    create: {
-      userId,
-      planType: newPlanType,
-      maxDailyRecordings: limits.maxDailyRecordings,
-      maxParticipants: limits.maxParticipants,
-      recordingRetentionDays: limits.recordingRetentionDays,
-      ...stripeData,
-    },
-    update: {
-      planType: newPlanType,
-      maxDailyRecordings: limits.maxDailyRecordings,
-      maxParticipants: limits.maxParticipants,
-      recordingRetentionDays: limits.recordingRetentionDays,
-      ...stripeData,
-    },
-  });
+    const user = await prisma.user.findUnique({
+      where: { clerkId: userId },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    const roomCreationCheck = await canCreateRoom(user.id);
+
+    if (!roomCreationCheck.canCreate) {
+      return NextResponse.json(
+        {
+          error: "ルーム作成数の上限に達しました",
+          code: "ROOM_CREATION_LIMIT_EXCEEDED",
+          currentCount: roomCreationCheck.currentCount,
+          maxCount: roomCreationCheck.maxCount,
+          planType: roomCreationCheck.planType,
+          needsUpgrade: true,
+        },
+        { status: 403 }
+      );
+    }
+
+    return handler(request);
+  } catch (error) {
+    console.error("Room creation limit check failed:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * ミドルウェア関数: 参加者制限チェック
+ */
+export async function withParticipantLimitCheck(
+  request: NextRequest,
+  handler: (request: NextRequest) => Promise<NextResponse>,
+  roomId: string
+) {
+  try {
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const participantCheck = await canAddParticipant(roomId);
+
+    if (!participantCheck.canAdd) {
+      return NextResponse.json(
+        {
+          error: "参加者制限に達しました",
+          code: "PARTICIPANT_LIMIT_EXCEEDED",
+          currentCount: participantCheck.currentCount,
+          maxCount: participantCheck.maxCount,
+          planType: participantCheck.planType,
+        },
+        { status: 403 }
+      );
+    }
+
+    return handler(request);
+  } catch (error) {
+    console.error("Participant limit check failed:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
 }

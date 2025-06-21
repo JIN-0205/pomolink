@@ -199,3 +199,20 @@ export interface GeminiProcessedData extends ExtractedDocAIData {
 export interface ErrorResponse {
   message: string;
 }
+
+// 公開統計データの型定義
+export type PublicStats = {
+  totalCompletedPomodoros: number;
+  totalRooms: number;
+  totalUsers: number;
+};
+
+// ダッシュボード統計の型定義（既存）
+export type DashboardStats = {
+  totalPomodoros: number;
+  completedTasks: number;
+  activeRooms: number;
+  weeklyProgress: number;
+  todayPomodoros: number;
+  streak: number;
+};

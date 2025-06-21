@@ -1,5 +1,6 @@
 import prisma from "@/lib/db";
 import { adminApp } from "@/lib/firebase-admin";
+import { canCreateRoom } from "@/lib/subscription-service";
 import { generateInviteCode } from "@/lib/utils";
 import { auth } from "@clerk/nextjs/server";
 import { getFirestore } from "firebase-admin/firestore";
@@ -19,6 +20,22 @@ export async function POST(req: NextRequest) {
 
     if (!user) {
       return new NextResponse("ユーザーが見つかりません", { status: 404 });
+    }
+
+    // ルーム作成制限チェック
+    const roomCreationCheck = await canCreateRoom(user.id);
+    if (!roomCreationCheck.canCreate) {
+      return NextResponse.json(
+        {
+          error: "ルーム作成数の上限に達しました",
+          code: "ROOM_CREATION_LIMIT_EXCEEDED",
+          currentCount: roomCreationCheck.currentCount,
+          maxCount: roomCreationCheck.maxCount,
+          planType: roomCreationCheck.planType,
+          needsUpgrade: true,
+        },
+        { status: 403 }
+      );
     }
 
     const { name, description, isPrivate = true } = await req.json();
@@ -50,6 +67,7 @@ export async function POST(req: NextRequest) {
         participants: true,
       },
     });
+
     try {
       const firestore = getFirestore(adminApp);
       // ルーム情報を保存
