@@ -25,6 +25,8 @@ interface SubscriptionLimitModalProps {
   onUpgrade: () => void;
   userRole?: "PLANNER" | "PERFORMER";
   roomOwnerName?: string;
+  recordingLimitType?: "USER" | "ROOM";
+  customMessage?: string;
 }
 
 const LIMIT_CONFIG = {
@@ -55,16 +57,28 @@ export function SubscriptionLimitModal({
   onUpgrade,
   userRole = "PLANNER",
   roomOwnerName,
+  recordingLimitType,
+  customMessage,
 }: SubscriptionLimitModalProps) {
   const config = LIMIT_CONFIG[limitType];
   const Icon = config.icon;
 
   const isPerformer = userRole === "PERFORMER";
   const isParticipantLimit = limitType === "PARTICIPANT";
+  const isRoomRecordingLimit =
+    limitType === "RECORDING" && recordingLimitType === "ROOM";
 
   const getRecommendedPlan = () => {
     if (currentPlan === PlanType.FREE) return PlanType.BASIC;
     return PlanType.PREMIUM;
+  };
+
+  const getDescription = () => {
+    if (customMessage) return customMessage;
+    if (isRoomRecordingLimit) {
+      return "このルームの本日の録画回数制限に達しています。制限はルーム作成者のプランによって決まります。";
+    }
+    return config.description;
   };
 
   const recommendedPlan = getRecommendedPlan();
@@ -79,7 +93,7 @@ export function SubscriptionLimitModal({
             <DialogTitle className="text-lg">{config.title}</DialogTitle>
           </div>
           <DialogDescription className="text-left">
-            {config.description}
+            {getDescription()}
           </DialogDescription>
         </DialogHeader>
 

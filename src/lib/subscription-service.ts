@@ -23,13 +23,23 @@ export async function getUserSubscription(): Promise<PlanType> {
  * ルームの作成者のプランを取得
  */
 export async function getRoomPlan(roomId: string): Promise<PlanType> {
+  console.log("=== ルームプラン取得 ===");
+  console.log("Room ID:", roomId);
+
   const roomCreatorId = await prisma.room.findUnique({
     where: { id: roomId },
   });
+
+  console.log("Room Creator ID:", roomCreatorId?.creatorId);
+
   const roomCreatorPlan = await prisma.user.findUnique({
     where: { id: roomCreatorId?.creatorId || "" },
   });
-  return roomCreatorPlan?.planType || PlanType.FREE;
+
+  const planType = roomCreatorPlan?.planType || PlanType.FREE;
+  console.log("Room Plan:", planType);
+
+  return planType;
 }
 
 /**
@@ -57,13 +67,18 @@ export async function canCreateRoom(userId: string): Promise<{
 }
 
 /**
- * 日次録画回数を取得
+ * 日次録画回数を取得（ユーザー個人）
  */
 export async function getDailyRecordingCount(userId: string): Promise<number> {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
+
+  console.log("=== ユーザー日次録画回数取得 ===");
+  console.log("User ID:", userId);
+  console.log("Today:", today.toISOString());
+  console.log("Tomorrow:", tomorrow.toISOString());
 
   const count = await prisma.recordingUsage.count({
     where: {
@@ -75,6 +90,42 @@ export async function getDailyRecordingCount(userId: string): Promise<number> {
     },
   });
 
+  console.log("ユーザー録画回数:", count);
+  return count;
+}
+
+/**
+ * ルーム全体の日次録画回数を取得
+ */
+export async function getRoomDailyRecordingCount(
+  roomId: string
+): Promise<number> {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  console.log("=== ルーム日次録画回数取得 ===");
+  console.log("Room ID:", roomId);
+  console.log("Today:", today.toISOString());
+  console.log("Tomorrow:", tomorrow.toISOString());
+
+  // ルームに関連するセッションの録画使用量を集計
+  const count = await prisma.recordingUsage.count({
+    where: {
+      session: {
+        task: {
+          roomId: roomId,
+        },
+      },
+      date: {
+        gte: today,
+        lt: tomorrow,
+      },
+    },
+  });
+
+  console.log("ルーム録画回数:", count);
   return count;
 }
 
@@ -89,16 +140,55 @@ export async function canRecord(
   currentCount: number;
   maxCount: number;
   planType: PlanType;
+  limitType: "USER" | "ROOM";
+  reason?: string;
 }> {
   const planType = await getRoomPlan(roomId);
   const limits = getPlanLimits(planType);
-  const currentCount = await getDailyRecordingCount(userId);
 
+  // ルーム全体の録画制限をチェック
+  const roomDailyCount = await getRoomDailyRecordingCount(roomId);
+  const userDailyCount = await getDailyRecordingCount(userId);
+
+  console.log("=== 制限チェック詳細 ===");
+  console.log("プランタイプ:", planType);
+  console.log("最大録画回数:", limits.maxDailyRecordings);
+  console.log("現在のルーム録画回数:", roomDailyCount);
+  console.log("現在のユーザー録画回数:", userDailyCount);
+
+  // ルーム制限をチェック（現在のアップロードを含めると制限を超えるか）
+  if (roomDailyCount >= limits.maxDailyRecordings) {
+    console.log("ルーム制限に達しています");
+    return {
+      canRecord: false,
+      currentCount: roomDailyCount,
+      maxCount: limits.maxDailyRecordings,
+      planType,
+      limitType: "ROOM",
+      reason: "ルーム全体の日次録画制限に達しました",
+    };
+  }
+
+  // ユーザー個人の制限もチェック（現在のアップロードを含めると制限を超えるか）
+  if (userDailyCount >= limits.maxDailyRecordings) {
+    console.log("ユーザー制限に達しています");
+    return {
+      canRecord: false,
+      currentCount: userDailyCount,
+      maxCount: limits.maxDailyRecordings,
+      planType,
+      limitType: "USER",
+      reason: "ユーザー個人の日次録画制限に達しました",
+    };
+  }
+
+  console.log("録画可能です");
   return {
-    canRecord: currentCount < limits.maxDailyRecordings,
-    currentCount,
+    canRecord: true,
+    currentCount: Math.max(roomDailyCount, userDailyCount),
     maxCount: limits.maxDailyRecordings,
     planType,
+    limitType: "ROOM",
   };
 }
 
@@ -145,14 +235,32 @@ export async function recordRecordingUsage(
   fileSize?: number,
   duration?: number
 ) {
-  return await prisma.recordingUsage.create({
+  console.log("=== 録画使用量記録開始 ===");
+  console.log("User ID:", userId);
+  console.log("Session ID:", sessionId);
+  console.log("File Size:", fileSize);
+  console.log("Duration:", duration);
+
+  // 今日の日付（時刻なし）を明示的に設定
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  console.log("Recording date:", today.toISOString());
+
+  const usage = await prisma.recordingUsage.create({
     data: {
       userId,
       sessionId,
       fileSize,
       duration,
+      date: today, // 明示的に今日の日付を設定
     },
   });
+
+  console.log("録画使用量記録完了:", usage);
+  console.log("=== 録画使用量記録終了 ===");
+
+  return usage;
 }
 
 /**
@@ -224,13 +332,15 @@ export async function withRecordingLimitCheck(
     const recordingCheck = await canRecord(roomId, user.id);
 
     if (!recordingCheck.canRecord) {
+      const errorMessage = recordingCheck.reason || "録画制限に達しました";
       return NextResponse.json(
         {
-          error: "録画制限に達しました",
+          error: errorMessage,
           code: "RECORDING_LIMIT_EXCEEDED",
           currentCount: recordingCheck.currentCount,
           maxCount: recordingCheck.maxCount,
           planType: recordingCheck.planType,
+          limitType: recordingCheck.limitType,
         },
         { status: 403 }
       );

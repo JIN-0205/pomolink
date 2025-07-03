@@ -49,20 +49,50 @@ export async function POST(req: NextRequest) {
       return new NextResponse("権限がありません", { status: 403 });
     }
 
+    // セッションが既に録画済みかチェック
+    if (session.recordingUrl) {
+      console.log("このセッションは既に録画済みです");
+      return new NextResponse("このセッションは既に録画済みです", {
+        status: 400,
+      });
+    }
+
+    // 既にこのセッション用の録画使用量記録が存在するかチェック
+    const existingUsage = await prisma.recordingUsage.findFirst({
+      where: { sessionId: sessionId },
+    });
+
+    if (existingUsage) {
+      console.log("このセッションの録画使用量は既に記録されています");
+      return new NextResponse("このセッションの録画は既に処理済みです", {
+        status: 400,
+      });
+    }
+
     // 録画制限チェック
+    console.log("=== 録画制限チェック開始 ===");
+    console.log("Room ID:", session.task.room.id);
+    console.log("User ID:", user.id);
+
     const recordingCheck = await canRecord(session.task.room.id, user.id);
+    console.log("録画制限チェック結果:", recordingCheck);
+
     if (!recordingCheck.canRecord) {
+      console.log("録画制限に達しました。アップロードを拒否します。");
+      const errorMessage = recordingCheck.reason || "録画制限に達しました";
       return NextResponse.json(
         {
-          error: "録画制限に達しました",
+          error: errorMessage,
           code: "RECORDING_LIMIT_EXCEEDED",
           currentCount: recordingCheck.currentCount,
           maxCount: recordingCheck.maxCount,
           planType: recordingCheck.planType,
+          limitType: recordingCheck.limitType,
         },
         { status: 403 }
       );
     }
+    console.log("=== 録画制限チェック完了: OK ===");
 
     // ファイルサイズ制限チェック (100MB)
     const maxFileSize = 100 * 1024 * 1024;
