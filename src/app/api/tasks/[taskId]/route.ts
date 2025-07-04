@@ -92,6 +92,10 @@ export async function PATCH(
       );
     }
 
+    // デバッグ用: 生のリクエストボディをログ出力
+    console.log("生のリクエストボディ:", JSON.stringify(requestBody, null, 2));
+    console.log("リクエストボディのキー:", Object.keys(requestBody));
+
     const {
       title,
       description,

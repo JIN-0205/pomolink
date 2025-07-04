@@ -11,7 +11,7 @@ interface TaskSummaryProps {
 const TaskSummary: React.FC<TaskSummaryProps> = ({ task, sessions = [] }) => {
   return (
     <Card>
-      <CardContent className="p-4">
+      <CardContent className="pl-8">
         <div className="flex flex-col space-y-2">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-medium">{task.title}</h3>

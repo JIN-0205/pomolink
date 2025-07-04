@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
+import { SubscriptionLimitModal } from "@/components/subscription/SubscriptionLimitModal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -32,6 +33,7 @@ import { useFrameCapture } from "@/hooks/useFrameCapture";
 import { useVideoEncoder } from "@/hooks/useVideoEncoder";
 import { useVideoUpload } from "@/hooks/useVideoUpload";
 import { AlarmPreset } from "@/lib/audio";
+import { PlanType } from "@prisma/client";
 
 // タイマーの種類
 type TimerType = "work" | "break";
@@ -94,6 +96,16 @@ export default function PomodoroPage() {
   const [encodedBlob, setEncodedBlob] = useState<Blob | null>(null);
   const [showVideoConfirm, setShowVideoConfirm] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  // 録画制限モーダル用のstate
+  const [showLimitModal, setShowLimitModal] = useState(false);
+  const [limitError, setLimitError] = useState<{
+    currentCount: number;
+    maxCount: number;
+    planType: PlanType;
+    error: string;
+    roomOwnerName?: string;
+  } | null>(null);
 
   // ユーザー設定を取得
   useEffect(() => {
@@ -308,24 +320,48 @@ export default function PomodoroPage() {
     previewUrl,
     resetStatus,
     sessionId,
-  ]);
-
-  // 動画保存（アップロード）
+  ]); // 動画保存（アップロード）
   const handleSaveVideo = useCallback(async () => {
     if (!encodedBlob || !sessionId) return;
     try {
-      // 1. Firebase Storage にアップロード
+      // 1. 録画制限チェック（シンプルなチェック）
+      const limitCheckResponse = await fetch(`/api/recording-check`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId: sessionId,
+        }),
+      });
+
+      if (!limitCheckResponse.ok) {
+        const error = await limitCheckResponse.json();
+        if (error.code === "RECORDING_LIMIT_EXCEEDED") {
+          // SubscriptionLimitModalで詳細を表示
+          setLimitError({
+            currentCount: error.currentCount,
+            maxCount: error.maxCount,
+            planType: error.planType,
+            error: error.error,
+            roomOwnerName: error.roomOwnerName,
+          });
+          setShowLimitModal(true);
+          return;
+        }
+        throw new Error("録画制限チェックに失敗しました");
+      }
+
+      // 2. Firebase Storage にアップロード
       const downloadUrl = await uploadVideo(
         encodedBlob,
         `timelapse/pomodoro-${sessionId}-${Date.now()}.mp4`
       );
-      // 2. Session を更新
+
+      // 3. Session を更新
       await fetch(`/api/pomodoro/sessions/${sessionId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           recordingUrl: downloadUrl,
-          // recordingDuration: integer seconds
           recordingDuration: Math.round(workDuration * 60),
           endTime: new Date().toISOString(),
           completed: true,
@@ -612,6 +648,20 @@ export default function PomodoroPage() {
   //   return ((totalTime - timeLeft) / totalTime) * 100;
   // };
 
+  // アップグレード処理
+
+  const handleUpgrade = () => {
+    // 価格ページにリダイレクト
+    router.push("/pricing");
+  };
+
+  // 制限モーダルを閉じる
+
+  const handleCloseLimitModal = () => {
+    setShowLimitModal(false);
+    setLimitError(null);
+  };
+
   return (
     <div className="container py-4 sm:py-6 max-w-3xl px-4 sm:px-6">
       <Button
@@ -630,7 +680,7 @@ export default function PomodoroPage() {
 
         {/* ポモドーロ設定情報（固定値を表示） */}
         <Card className="overflow-hidden">
-          <CardContent className="p-4 sm:p-6">
+          <CardContent className="px-4 sm:px-6">
             <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">
               ポモドーロ設定
             </h2>
@@ -651,8 +701,7 @@ export default function PomodoroPage() {
               </div>
             </div>
             <p className="text-xs sm:text-sm text-muted-foreground mt-3 sm:mt-4 text-center">
-              ⚡
-              時間設定は公平性のため固定されています（ポモドーロテクニック標準）
+              時間はプランナーによって設定されています。
             </p>
           </CardContent>
         </Card>
@@ -682,32 +731,26 @@ export default function PomodoroPage() {
             timerType={timerType}
           />
 
-          <div className="text-center space-y-2 px-4">
+          {/* <div className="text-center space-y-2 px-4">
             <div className="text-xs sm:text-sm text-muted-foreground">
               {timerType === "work"
                 ? "集中して作業に取り組みましょう！"
                 : "しっかり休憩をとりましょう。次のサイクルに備えてください。"}
             </div>
-            {/* サイクル情報 */}
-            <div className="text-xs sm:text-sm">
-              完了したポモドーロ:{" "}
-              <span className="font-semibold">{task?.completedPomos || 0}</span>
-              {task?.estimatedPomos && ` / ${task.estimatedPomos}`}
-            </div>
-          </div>
+          </div> */}
         </div>
 
         {/* カメラプレビュー */}
         <Card className="overflow-hidden">
-          <CardContent className="p-4 sm:p-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 sm:mb-4 gap-2">
+          <CardContent className=" sm:px-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 sm:mb-4 gap-2 ">
               <h3 className="font-bold text-sm sm:text-base">カメラ設定</h3>
               <div className="flex items-center gap-2">
                 <span className="text-xs sm:text-sm text-muted-foreground">
                   カメラ
                 </span>
                 <Button
-                  variant={isCameraEnabled ? "default" : "outline"}
+                  variant={isCameraEnabled ? "main" : "outline"}
                   size="sm"
                   onClick={() => setIsCameraEnabled(!isCameraEnabled)}
                   className="px-3 py-1 text-xs sm:text-sm"
@@ -823,6 +866,22 @@ export default function PomodoroPage() {
               動画を表示
             </a>
           </div>
+        )}
+
+        {/* 録画制限モーダル */}
+        {limitError && (
+          <SubscriptionLimitModal
+            isOpen={showLimitModal}
+            onClose={handleCloseLimitModal}
+            limitType="RECORDING"
+            currentPlan={limitError.planType}
+            currentCount={limitError.currentCount}
+            maxCount={limitError.maxCount}
+            onUpgrade={handleUpgrade}
+            customMessage={limitError.error}
+            recordingLimitType="ROOM"
+            roomOwnerName={limitError.roomOwnerName}
+          />
         )}
       </div>
     </div>

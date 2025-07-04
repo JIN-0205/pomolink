@@ -79,7 +79,6 @@ export default function TaskPage({ params }: TaskPageProps) {
   useEffect(() => {
     const fetchTaskAndSessions = async () => {
       try {
-        console.log(`taskId: ${taskId}`);
         const response = await fetch(`/api/tasks/${taskId}`);
         if (!response.ok) throw new Error("タスクの取得に失敗しました");
         const data = await response.json();

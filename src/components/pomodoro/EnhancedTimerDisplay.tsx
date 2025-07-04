@@ -146,9 +146,9 @@ export default function EnhancedTimerDisplay({
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent transform -skew-x-12 translate-x-full animate-[shimmer_3s_infinite]" />
       </div>
 
-      <CardContent className="relative p-4 sm:p-6 lg:p-8 text-center">
+      <CardContent className="relative py-2 text-center">
         {/* タイマータイプバッジ */}
-        <div className="flex justify-center mb-4 sm:mb-6">
+        <div className="flex justify-center mb-4 sm:mb-6 ">
           <Badge
             variant="secondary"
             className={cn(
