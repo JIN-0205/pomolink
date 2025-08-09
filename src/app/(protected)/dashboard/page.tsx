@@ -52,7 +52,6 @@ export default function DashboardPage() {
       try {
         setIsLoading(true);
 
-        // 統計データとアクティビティを並行して取得
         const [statsResponse, activitiesResponse] = await Promise.all([
           fetch("/api/dashboard/stats"),
           fetch("/api/dashboard/activities"),
@@ -91,9 +90,7 @@ export default function DashboardPage() {
       <div className="space-y-8">
         <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-              ダッシュボード
-            </h1>
+            <h1 className="text-3xl font-bold">ダッシュボード</h1>
             <p className="text-muted-foreground mt-2">データを読み込み中...</p>
           </div>
         </div>
@@ -117,12 +114,9 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      {/* ヘッダー */}
       <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-            ダッシュボード
-          </h1>
+          <h1 className="text-3xl font-bold">ダッシュボード</h1>
           <p className="text-muted-foreground mt-2">
             今日も集中して取り組みましょう！
           </p>
@@ -143,9 +137,8 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* 統計カード */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="hover-lift border-0 shadow-sm bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/50 dark:to-red-900/50">
+        <Card className=" border-0 shadow-sm bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/50 dark:to-red-900/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-red-700 dark:text-red-300">
               今日のポモドーロ
@@ -166,7 +159,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="hover-lift border-0 shadow-sm bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/50 dark:to-green-900/50">
+        <Card className="border-0 shadow-sm bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/50 dark:to-green-900/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-green-700 dark:text-green-300">
               完了タスク
@@ -183,7 +176,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="hover-lift border-0 shadow-sm bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/50 dark:to-blue-900/50">
+        <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/50 dark:to-blue-900/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-blue-700 dark:text-blue-300">
               参加ルーム
@@ -200,7 +193,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="hover-lift border-0 shadow-sm bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/50 dark:to-purple-900/50">
+        <Card className="border-0 shadow-sm bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/50 dark:to-purple-900/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-purple-700 dark:text-purple-300">
               継続日数
@@ -218,10 +211,9 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* メインコンテンツエリア */}
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* 週間進捗 */}
-        <Card className="lg:col-span-2 hover-lift">
+        {/* weekly progress */}
+        <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <TrendingUp className="h-5 w-5 text-indigo-500" />
@@ -247,7 +239,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* クイックアクション */}
+        {/* Quick Actions */}
         <Card className="hover-lift">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -271,7 +263,7 @@ export default function DashboardPage() {
               variant="outline"
               className="w-full justify-start hover-lift"
             >
-              <Link href="/join">
+              <Link href="/rooms/join">
                 <Users className="mr-2 h-4 w-4" />
                 ルームに参加
               </Link>
@@ -290,8 +282,8 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* 最近のアクティビティ */}
-      <Card className="hover-lift">
+      {/* Recent Activities */}
+      <Card className="">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Calendar className="h-5 w-5 text-blue-500" />
@@ -299,12 +291,12 @@ export default function DashboardPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
+          <div className="space-y-4 ">
             {recentActivities.length > 0 ? (
               recentActivities.map((activity, index) => (
                 <div
                   key={index}
-                  className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
+                  className="flex items-center justify-between p-3 px-4 sm:px-8 rounded-lg bg-muted/50  transition-colors"
                 >
                   <div>
                     <p className="font-medium">{activity.action}</p>

@@ -2,7 +2,6 @@ import prisma from "@/lib/db";
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 
-// PATCH: セッションの録画情報・完了状態を更新
 export async function PATCH(
   req: NextRequest,
   context: { params: Promise<{ sessionId: string }> }
@@ -14,19 +13,16 @@ export async function PATCH(
 
     const { recordingUrl, recordingDuration, endTime, completed } =
       await req.json();
-    // セッション取得
     const session = await prisma.session.findUnique({
       where: { id: sessionId },
       include: { task: { select: { roomId: true } } },
     });
     if (!session)
       return new NextResponse("セッションが見つかりません", { status: 404 });
-    // 権限チェック
     const user = await prisma.user.findUnique({ where: { clerkId } });
     if (!user || session.userId !== user.id) {
       return new NextResponse("権限がありません", { status: 403 });
     }
-    // セッション更新
     const updated = await prisma.session.update({
       where: { id: sessionId },
       data: {
@@ -37,10 +33,8 @@ export async function PATCH(
           typeof completed === "boolean" ? completed : session.completed,
       },
     });
-    // 完了状態になった場合にポイント履歴を追加
     if (!session.completed && updated.completed) {
       try {
-        // デフォルト1ポイントを付与
         await prisma.pointHistory.create({
           data: {
             userId: session.userId,
@@ -56,7 +50,6 @@ export async function PATCH(
           "[SESSION_PATCH_BONUS] ボーナスポイント作成エラー",
           bonusError
         );
-        // ポイント履歴作成エラーは全体の更新失敗としない
       }
     }
 

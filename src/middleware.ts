@@ -5,6 +5,8 @@ const isPublicRoute = createRouteMatcher([
   "/sign-in(.*)",
   "/sign-up(.*)",
   "/api/webhooks(.*)",
+  "/api/test(.*)",
+  "/api/cron(.*)",
 ]);
 
 // 管理者ルートの定義（将来的な拡張用）
@@ -20,7 +22,6 @@ const isProtectedApiRoute = createRouteMatcher([
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
-  // 管理者ルートの保護（権限ベースの認証）
   if (isAdminRoute(req)) {
     await auth.protect((has) => {
       return has({ role: "admin" }) || has({ permission: "admin:access" });
@@ -28,13 +29,11 @@ export default clerkMiddleware(async (auth, req) => {
     return;
   }
 
-  // 保護されたAPIルートの認証
   if (isProtectedApiRoute(req)) {
     await auth.protect();
     return;
   }
 
-  // その他の保護されたルート
   if (!isPublicRoute(req)) {
     await auth.protect();
   }

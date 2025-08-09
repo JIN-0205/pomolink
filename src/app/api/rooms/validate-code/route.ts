@@ -1,4 +1,3 @@
-// src/app/api/rooms/validate-code/route.ts
 import prisma from "@/lib/db";
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
@@ -17,7 +16,6 @@ export async function GET(req: NextRequest) {
       return new NextResponse("招待コードが必要です", { status: 400 });
     }
 
-    // 招待コードでルームを検索
     const room = await prisma.room.findUnique({
       where: { inviteCode: code },
       select: {

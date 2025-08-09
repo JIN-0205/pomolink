@@ -18,7 +18,6 @@ export function getUserRole(
 }
 
 /**
- * 指定したroomIdのルーム情報と参加者リストを取得する
  * @param roomId string
  * @returns Room & { participants: Array<{ userId: string; role: "PLANNER" | "PERFORMER" }> }
  */

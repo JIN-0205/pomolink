@@ -48,13 +48,6 @@ export async function POST(req: Request) {
     });
   }
 
-  // // Do something with payload
-  // // For this guide, log payload to console
-  // const { id } = evt.data;
-  // const eventType = evt.type;
-  // console.log(`Received webhook with ID ${id} and event type of ${eventType}`);
-  // console.log("Webhook payload:", body);
-
   if (evt.type === "user.created" || evt.type === "user.updated") {
     const { id, email_addresses, first_name, image_url } = evt.data;
     const email = email_addresses[0].email_address;
@@ -85,12 +78,39 @@ export async function POST(req: Request) {
   if (evt.type === "user.deleted") {
     const { id } = evt.data;
     try {
+      // まずユーザーが存在するかチェック
+      const existingUser = await prisma.user.findUnique({
+        where: { clerkId: id },
+      });
+
+      if (!existingUser) {
+        console.log(`User with clerkId ${id} not found, already deleted`);
+        return new Response("User not found (already deleted)", {
+          status: 200,
+        });
+      }
+
+      // ユーザーが存在する場合のみ削除を実行
       await prisma.user.delete({
         where: { clerkId: id },
       });
+
+      console.log(`User with clerkId ${id} deleted successfully`);
       return new Response("User deleted successfully", { status: 200 });
     } catch (err) {
       console.error("Error deleting user:", err);
+
+      // P2025エラー（レコードが見つからない）の場合は正常終了
+      if (
+        err &&
+        typeof err === "object" &&
+        "code" in err &&
+        err.code === "P2025"
+      ) {
+        console.log(`User with clerkId ${id} already deleted`);
+        return new Response("User already deleted", { status: 200 });
+      }
+
       return new Response("Error deleting user", { status: 500 });
     }
   }

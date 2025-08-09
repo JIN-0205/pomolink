@@ -9,6 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
 import { AlarmPreset, playAlarm } from "@/lib/audio";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -17,6 +18,7 @@ export default function SettingsPage() {
   const [settings, setSettings] = useState({
     workAlarmSound: "buzzer" as AlarmPreset,
     breakAlarmSound: "kalimba" as AlarmPreset,
+    soundVolume: 0.5,
   });
   const [, setIsLoading] = useState(false);
 
@@ -96,7 +98,9 @@ export default function SettingsPage() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => playAlarm(settings.workAlarmSound)}
+                onClick={() =>
+                  playAlarm(settings.workAlarmSound, settings.soundVolume)
+                }
               >
                 試聴
               </Button>
@@ -127,10 +131,37 @@ export default function SettingsPage() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => playAlarm(settings.breakAlarmSound)}
+                onClick={() =>
+                  playAlarm(settings.breakAlarmSound, settings.soundVolume)
+                }
               >
                 試聴
               </Button>
+            </div>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium mb-2 block">
+              音量設定: {Math.round(settings.soundVolume * 100)}%
+            </label>
+            <div className="px-3">
+              <Slider
+                value={[settings.soundVolume * 100]}
+                onValueChange={(value) => {
+                  const newVolume = value[0] / 100;
+                  setSettings((prev) => ({ ...prev, soundVolume: newVolume }));
+                  updateSettings({ soundVolume: newVolume });
+                }}
+                max={100}
+                min={0}
+                step={5}
+                className="w-full"
+              />
+              <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                <span>0%</span>
+                <span>50%</span>
+                <span>100%</span>
+              </div>
             </div>
           </div>
         </CardContent>

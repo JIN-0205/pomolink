@@ -39,7 +39,6 @@ export default function SubscriptionSuccessPage() {
   } | null>(null);
 
   useEffect(() => {
-    // プラン情報を取得
     const fetchPlanInfo = async () => {
       try {
         const response = await fetch("/api/subscription/plan");
@@ -49,7 +48,6 @@ export default function SubscriptionSuccessPage() {
         }
       } catch (error) {
         console.error("Failed to fetch plan info:", error);
-        // フォールバック: BASICプランとして表示
         setPlanInfo({
           planType: "BASIC",
           planName: getPlanName("BASIC"),
@@ -140,17 +138,13 @@ export default function SubscriptionSuccessPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 py-8 px-4">
       <div className="max-w-4xl mx-auto space-y-8">
-        {/* メインヘッダー */}
         <div className="text-center space-y-6">
-          {/* 成功アイコン */}
           <div className="relative">
             <div className="mx-auto w-24 h-24 bg-gradient-to-r from-green-400 to-green-600 rounded-full flex items-center justify-center shadow-lg animate-bounce">
               <CheckCircle className="h-12 w-12 text-white" />
             </div>
             <div className="absolute -top-2 -right-2"></div>
           </div>
-
-          {/* タイトルと説明 */}
           <div className="space-y-4">
             <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
               サブスクリプションが完了しました！
@@ -163,8 +157,6 @@ export default function SubscriptionSuccessPage() {
             </p>
           </div>
         </div>
-
-        {/* プレミアム機能 */}
         <Card className="hover-lift border-0 shadow-lg bg-gradient-to-br from-white to-gray-50/50">
           <CardHeader className="text-center pb-6">
             <div className="flex items-center justify-center gap-2 mb-2">
@@ -204,8 +196,6 @@ export default function SubscriptionSuccessPage() {
             </div>
           </CardContent>
         </Card>
-
-        {/* クイックアクション - CTA風デザイン */}
         <div className="text-center space-y-6 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-8 text-white">
           <div className="flex items-center justify-center gap-2 mb-4">
             <Zap className="h-8 w-8 text-yellow-300" />
@@ -216,8 +206,6 @@ export default function SubscriptionSuccessPage() {
             {planInfo.planName}
             の機能で集中力を向上させ、チームと一緒により多くのことを達成しましょう。
           </p>
-
-          {/* クイックアクションボタングリッド */}
           <div className="grid gap-4 max-w-4xl mx-auto mt-8">
             {quickActions.map((action, index) => (
               <Link key={index} href={action.href}>
@@ -242,8 +230,7 @@ export default function SubscriptionSuccessPage() {
           </div>
         </div>
 
-        {/* サポート情報 */}
-        <div className="text-center space-y-4 py-6">
+        {/* <div className="text-center space-y-4 py-6">
           <div className="flex items-center justify-center gap-2 text-gray-600 text-sm">
             サポートが必要な場合は、いつでもお気軽にお問い合わせください。
           </div>
@@ -269,7 +256,7 @@ export default function SubscriptionSuccessPage() {
               設定
             </Link>
           </div>
-        </div>
+        </div> */}
       </div>
     </div>
   );

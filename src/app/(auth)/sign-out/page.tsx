@@ -17,7 +17,6 @@ export default function SignOutPage() {
         router.push("/");
       } catch (error) {
         console.error("Sign out error:", error);
-        // エラーが発生してもホームページにリダイレクト
         router.push("/");
       } finally {
         setIsSigningOut(false);

@@ -17,6 +17,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RoomWithParticipants, Task, TaskProposalWithProposer } from "@/types";
 import { useUser } from "@clerk/nextjs";
@@ -44,9 +45,6 @@ export default function RoomPage() {
   const searchParams = useSearchParams();
   const defaultTab = searchParams.get("tab") ?? "overview";
   const { user } = useUser();
-  useEffect(() => {
-    console.log(user);
-  }, [user]);
 
   const [room, setRoom] = useState<RoomWithParticipants | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -58,24 +56,6 @@ export default function RoomPage() {
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [currentUserDbId, setCurrentUserDbId] = useState<string | null>(null);
-
-  const sendMail = async () => {
-    try {
-      console.log("メール送信リクエストを開始");
-      const res = await fetch("/api/send", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        // body: JSON.stringify({
-        //   email: "<user_email>",
-        // }),
-      });
-      console.log("メール送信リクエスト:", res);
-    } catch (err) {
-      console.error("メール送信エラー:", err);
-    }
-  };
 
   useEffect(() => {
     const fetchUserDbId = async () => {
@@ -95,7 +75,6 @@ export default function RoomPage() {
     fetchUserDbId();
   }, [user?.id]);
 
-  // ルーム情報を取得
   useEffect(() => {
     const fetchRoomDetails = async () => {
       try {
@@ -106,14 +85,12 @@ export default function RoomPage() {
         const data = await res.json();
         setRoom(data);
 
-        // タスク情報も取得
         const tasksRes = await fetch(`/api/rooms/${roomId}/tasks`);
         if (tasksRes.ok) {
           const tasksData = await tasksRes.json();
           setTasks(tasksData);
         }
 
-        // タスク提案情報も取得
         const proposalsRes = await fetch(`/api/rooms/${roomId}/task-proposals`);
         if (proposalsRes.ok) {
           const proposalsData = await proposalsRes.json();
@@ -134,7 +111,6 @@ export default function RoomPage() {
     }
   }, [roomId]);
 
-  // ルームから退出する処理
   const handleLeaveRoom = async () => {
     if (!confirm("このルームから退出しますか？この操作は取り消せません。")) {
       return;
@@ -162,7 +138,6 @@ export default function RoomPage() {
     }
   };
 
-  // ローディング表示
   if (isLoading) {
     return (
       <div className="container py-6">
@@ -200,14 +175,12 @@ export default function RoomPage() {
     );
   }
 
-  // ユーザーが持つ権限を確認
   const currentUserParticipant = room.participants.find(
     (p) => p.userId === currentUserDbId
   );
   const isCreator = room.creatorId === currentUserDbId;
   const isPlanner = currentUserParticipant?.role === "PLANNER" || isCreator;
 
-  // 統計情報の計算
   const completedTasks = tasks.filter((t) => t.status === "COMPLETED").length;
   const totalCompletedPomos = tasks.reduce(
     (sum, task) => sum + (task.completedPomos || 0),
@@ -216,17 +189,10 @@ export default function RoomPage() {
 
   return (
     <div className="container py-6">
-      {/* ルームヘッダー */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
-        <div onClick={sendMail}>hello</div>
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-3xl font-bold">{room.name}</h1>
-            {room.isPrivate ? (
-              <Badge>非公開</Badge>
-            ) : (
-              <Badge variant="outline">公開</Badge>
-            )}
           </div>
           <p className="text-muted-foreground mt-1">
             作成日:{" "}
@@ -278,7 +244,6 @@ export default function RoomPage() {
         </div>
       </div>
 
-      {/* タブナビゲーション */}
       <Tabs
         defaultValue="overview"
         value={activeTab}
@@ -294,10 +259,8 @@ export default function RoomPage() {
           )}
         </TabsList>
 
-        {/* 概要タブ */}
         <TabsContent value="overview">
           <div className="grid gap-6 md:grid-cols-2">
-            {/* 統計カード */}
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg font-bold text-indigo-900">
@@ -344,7 +307,6 @@ export default function RoomPage() {
               </CardContent>
             </Card>
 
-            {/* 参加者カード */}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <div>
@@ -407,82 +369,6 @@ export default function RoomPage() {
               </CardContent>
             </Card>
 
-            {/* 最近のタスクカード */}
-            {/* <Card className="md:col-span-2">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle>最近のタスク</CardTitle>
-                  <CardDescription>最近の活動状況</CardDescription>
-                </div>
-                {isPlanner && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => router.push(`/rooms/${roomId}/tasks/create`)}
-                  >
-                    新規タスク
-                  </Button>
-                )}
-              </CardHeader>
-              <CardContent>
-                {tasks.length > 0 ? (
-                  <div className="space-y-2">
-                    {tasks.slice(0, 5).map((task) => (
-                      <div
-                        key={task.id}
-                        className="flex items-center justify-between p-3 rounded-lg border cursor-pointer hover:bg-muted/30 transition-colors"
-                        onClick={() =>
-                          router.push(`/rooms/${roomId}/tasks/${task.id}`)
-                        }
-                      >
-                        <div>
-                          <h4 className="font-medium">{task.title}</h4>
-                          <p className="text-sm text-muted-foreground">
-                            {task.estimatedPomos} ポモドーロ •
-                            {task.status === "COMPLETED"
-                              ? " 完了"
-                              : task.status === "IN_PROGRESS"
-                                ? " 進行中"
-                                : " 未着手"}
-                          </p>
-                        </div>
-                        <Badge
-                          variant={
-                            task.priority === "HIGH"
-                              ? "destructive"
-                              : task.priority === "MEDIUM"
-                                ? "main"
-                                : "sub"
-                          }
-                        >
-                          {task.priority === "HIGH"
-                            ? "高"
-                            : task.priority === "MEDIUM"
-                              ? "中"
-                              : "低"}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-6">
-                    <p className="text-muted-foreground">
-                      タスクがまだありません
-                    </p>
-                    {isPlanner && (
-                      <Button
-                        className="mt-2"
-                        onClick={() =>
-                          router.push(`/rooms/${roomId}/tasks/create`)
-                        }
-                      >
-                        最初のタスクを作成
-                      </Button>
-                    )}
-                  </div>
-                )}
-              </CardContent>
-            </Card> */}
             <Card className="md:col-span-2 border-0 shadow-sm">
               <CardHeader className="flex items-center justify-between pb-2">
                 <div className="space-y-1">
@@ -508,7 +394,6 @@ export default function RoomPage() {
                 {tasks.length > 0 ? (
                   <div className="space-y-3">
                     {tasks.slice(0, 5).map((task) => {
-                      // pick icon & status text
                       let StatusIcon = Clock;
                       let statusText = "未着手";
                       if (task.status === "COMPLETED") {
@@ -518,7 +403,7 @@ export default function RoomPage() {
                         StatusIcon = AlertCircle;
                         statusText = "進行中";
                       }
-                      // pick badge color
+
                       const badgeClasses =
                         task.priority === "HIGH"
                           ? "bg-red-500 hover:bg-red-600"
@@ -576,7 +461,6 @@ export default function RoomPage() {
               </CardContent>
             </Card>
 
-            {/* パフォーマー用タスク提案セクション */}
             {!isPlanner && currentUserParticipant?.role === "PERFORMER" && (
               <Card className="md:col-span-2">
                 <CardHeader>
@@ -600,26 +484,21 @@ export default function RoomPage() {
           </div>
         </TabsContent>
 
-        {/* タスクタブ */}
         <TabsContent value="tasks">
           <TaskList roomId={roomId as string} isPlanner={isPlanner} />
         </TabsContent>
 
-        {/* 参加者タブ */}
         <TabsContent value="participants">
           <div className="space-y-6">
-            {/* 招待セクション - 管理者/プランナーのみ表示 */}
             {isPlanner && room && (
               <div className="space-y-4">
                 <h3 className="text-lg font-medium">メンバーを招待</h3>
 
-                {/* 招待コード表示コンポーネント */}
                 <InviteCodeDisplay
                   roomId={roomId as string}
                   initialCode={room.inviteCode}
                 />
 
-                {/* メール招待ボタン */}
                 <div className="mt-4">
                   <Button onClick={() => setShowInviteModal(true)}>
                     <UserPlus className="mr-2 h-4 w-4" />
@@ -629,7 +508,6 @@ export default function RoomPage() {
               </div>
             )}
 
-            {/* 参加者リスト */}
             <div className="mt-8">
               <ParticipantList
                 roomId={roomId as string}
@@ -641,7 +519,6 @@ export default function RoomPage() {
           </div>
         </TabsContent>
 
-        {/* 提案管理タブ - プランナーのみ */}
         {isPlanner && (
           <TabsContent value="proposals">
             <div className="space-y-6">
@@ -664,7 +541,6 @@ export default function RoomPage() {
           </TabsContent>
         )}
 
-        {/* ルーム管理タブ - 作成者またはメインプランナー */}
         {(isCreator || room?.mainPlannerId === currentUserDbId) && (
           <TabsContent value="management">
             <div className="space-y-6">
@@ -677,7 +553,6 @@ export default function RoomPage() {
                 </div>
               </div>
 
-              {/* メインプランナー管理 */}
               <Card>
                 <CardHeader>
                   <CardTitle>メインプランナー設定</CardTitle>
@@ -699,7 +574,6 @@ export default function RoomPage() {
                 </CardContent>
               </Card>
 
-              {/* その他の管理機能 - 作成者のみ */}
               {isCreator && (
                 <Card>
                   <CardHeader>
@@ -724,7 +598,6 @@ export default function RoomPage() {
         )}
       </Tabs>
 
-      {/* モーダル */}
       {showInviteModal && (
         <InviteModal
           roomId={roomId as string}

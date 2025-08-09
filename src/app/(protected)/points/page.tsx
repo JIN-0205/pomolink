@@ -37,7 +37,6 @@ import { Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-// ポイント履歴型
 interface PointHistory {
   id: string;
   type: string;
@@ -47,7 +46,6 @@ interface PointHistory {
   createdAt: string;
 }
 
-// APIレスポンス型定義
 interface ApiRoomItem {
   room: Room;
   participantCount: number;
@@ -60,7 +58,6 @@ interface ApiPerformersResponse {
   performers: User[];
 }
 
-// ルーム一覧取得API
 const fetchPlannerRooms = async (): Promise<Room[]> => {
   const res = await fetch("/api/rooms?role=PLANNER");
   if (!res.ok) return [];
@@ -68,7 +65,6 @@ const fetchPlannerRooms = async (): Promise<Room[]> => {
   return data.map((item) => item.room);
 };
 
-// ルーム一覧取得API (パフォーマーとして所属)
 const fetchPerformerRooms = async (): Promise<Room[]> => {
   const res = await fetch("/api/rooms?role=PERFORMER");
   if (!res.ok) return [];
@@ -76,7 +72,6 @@ const fetchPerformerRooms = async (): Promise<Room[]> => {
   return data.map((item) => item.room);
 };
 
-// ルームごとのパフォーマー一覧取得API
 const fetchRoomPerformers = async (roomId: string): Promise<User[]> => {
   const res = await fetch(`/api/rooms/${roomId}/performers`);
   if (!res.ok) return [];
@@ -84,7 +79,6 @@ const fetchRoomPerformers = async (roomId: string): Promise<User[]> => {
   return data.performers;
 };
 
-// パフォーマーのポイント履歴取得API
 const fetchUserPointHistories = async (
   userId: string
 ): Promise<PointHistory[]> => {
@@ -94,7 +88,6 @@ const fetchUserPointHistories = async (
   return data.histories;
 };
 
-// 自分のルームごとのポイント履歴取得API
 const fetchSelfHistoriesByRoom = async (
   roomId: string
 ): Promise<PointHistory[]> => {
@@ -107,7 +100,6 @@ const fetchSelfHistoriesByRoom = async (
 const PointsPage = () => {
   const { isLoaded } = useUser();
 
-  // プランナーとしてのルーム管理用
   const [plannerRooms, setPlannerRooms] = useState<Room[]>([]);
   const [roomPerformers, setRoomPerformers] = useState<Record<string, User[]>>(
     {}
@@ -117,7 +109,6 @@ const PointsPage = () => {
   }>({});
   const [loadingPerformer, setLoadingPerformer] = useState<string | null>(null);
 
-  // パフォーマーとしてのルーム用
   const [performerRooms, setPerformerRooms] = useState<Room[]>([]);
   const [performerRoomHistories, setPerformerRoomHistories] = useState<
     Record<string, PointHistory[]>
@@ -126,7 +117,6 @@ const PointsPage = () => {
     string | null
   >(null);
 
-  // ポイント付与ダイアログの状態
   const [isAddPointDialogOpen, setIsAddPointDialogOpen] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [selectedPerformer, setSelectedPerformer] = useState<User | null>(null);
@@ -137,10 +127,9 @@ const PointsPage = () => {
   useEffect(() => {
     if (!isLoaded) return;
 
-    // プランナーとしてのルーム一覧を取得
     fetchPlannerRooms().then((rooms) => {
       setPlannerRooms(rooms);
-      // 各ルームのパフォーマー一覧を取得
+
       rooms.forEach((room) => {
         fetchRoomPerformers(room.id).then((performers) => {
           setRoomPerformers((prev) => ({ ...prev, [room.id]: performers }));
@@ -148,10 +137,9 @@ const PointsPage = () => {
       });
     });
 
-    // パフォーマーとしてのルーム一覧を取得
     fetchPerformerRooms().then((rooms) => {
       setPerformerRooms(rooms);
-      // 各ルームのポイント履歴を取得
+
       rooms.forEach((room) => {
         setLoadingPerformerRoom(room.id);
         fetchSelfHistoriesByRoom(room.id).then((histories) => {
@@ -165,7 +153,6 @@ const PointsPage = () => {
     });
   }, [isLoaded]);
 
-  // パフォーマー名クリック時に履歴取得
   const handlePerformerClick = async (userId: string) => {
     if (!performerHistories[userId]) {
       setLoadingPerformer(userId);
@@ -175,7 +162,6 @@ const PointsPage = () => {
     }
   };
 
-  // ポイント付与処理
   const handleAddPoints = async () => {
     if (!selectedRoom || !selectedPerformer || !pointsToAdd) {
       toast.error("必要な情報を入力してください");
@@ -207,14 +193,12 @@ const PointsPage = () => {
 
       toast.success("ポイントを付与しました");
 
-      // ダイアログを閉じる
       setIsAddPointDialogOpen(false);
       setSelectedRoom(null);
       setSelectedPerformer(null);
       setPointsToAdd("");
       setPointReason("");
 
-      // 該当パフォーマーの履歴を再取得
       if (selectedPerformer) {
         const updatedHistories = await fetchUserPointHistories(
           selectedPerformer.id
@@ -232,7 +216,6 @@ const PointsPage = () => {
     }
   };
 
-  // ポイント履歴タイプの日本語化
   const formatPointType = (type: string) => {
     switch (type) {
       case "POMODORO_COMPLETE":
@@ -248,7 +231,6 @@ const PointsPage = () => {
     }
   };
 
-  // ポイント合計を計算する関数
   const calculateTotalPoints = (histories: PointHistory[]) => {
     return histories.reduce((sum, history) => sum + history.points, 0);
   };
@@ -265,7 +247,7 @@ const PointsPage = () => {
           <TabsTrigger value="planner">プランナーとしての管理</TabsTrigger>
         </TabsList>
 
-        {/* パフォーマーとしてのポイント表示 */}
+        {/* Performer Points */}
         <TabsContent value="performer">
           <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -358,7 +340,7 @@ const PointsPage = () => {
           </div>
         </TabsContent>
 
-        {/* プランナーとしての管理 */}
+        {/* Planner points */}
         <TabsContent value="planner">
           <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -398,7 +380,7 @@ const PointsPage = () => {
                             </DialogHeader>
                             <div className="space-y-4">
                               <div>
-                                <Label>パフォーマー選択</Label>
+                                <Label className="pb-2">パフォーマー選択</Label>
                                 <Select
                                   onValueChange={(value) => {
                                     const performer = roomPerformers[
@@ -425,7 +407,7 @@ const PointsPage = () => {
                                 </Select>
                               </div>
                               <div>
-                                <Label>ポイント数</Label>
+                                <Label className="pb-2">ポイント数</Label>
                                 <Input
                                   type="number"
                                   min="1"
@@ -437,7 +419,7 @@ const PointsPage = () => {
                                 />
                               </div>
                               <div>
-                                <Label>理由（任意）</Label>
+                                <Label className="pb-2">理由（任意）</Label>
                                 <Input
                                   value={pointReason}
                                   onChange={(e) =>

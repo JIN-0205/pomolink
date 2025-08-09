@@ -1,9 +1,7 @@
-// app/api/rooms/[roomId]/route.ts
 import prisma from "@/lib/db";
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 
-// ルーム詳細取得API
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ roomId: string }> }
@@ -23,7 +21,6 @@ export async function GET(
       return new NextResponse("ユーザーが見つかりません", { status: 404 });
     }
 
-    // ルームを取得
     const room = await prisma.room.findUnique({
       where: { id: roomId },
       include: {
@@ -63,7 +60,6 @@ export async function GET(
       return new NextResponse("ルームが見つかりません", { status: 404 });
     }
 
-    // ユーザーがルームに参加しているか確認
     const isParticipant = room.participants.some((p) => p.userId === user.id);
 
     if (!isParticipant) {
@@ -77,7 +73,6 @@ export async function GET(
   }
 }
 
-// ルーム更新API
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ roomId: string }> }
@@ -97,9 +92,8 @@ export async function PATCH(
       return new NextResponse("ユーザーが見つかりません", { status: 404 });
     }
 
-    const { name, description, isPrivate } = await req.json();
+    const { name, description } = await req.json();
 
-    // ルームを取得
     const room = await prisma.room.findUnique({
       where: { id: roomId },
       include: {
@@ -111,7 +105,6 @@ export async function PATCH(
       return new NextResponse("ルームが見つかりません", { status: 404 });
     }
 
-    // PLANNERロールを持つ参加者か確認
     const isPlannerOfRoom = room.participants.some(
       (p) => p.userId === user.id && p.role === "PLANNER"
     );
@@ -120,13 +113,11 @@ export async function PATCH(
       return new NextResponse("ルームの更新権限がありません", { status: 403 });
     }
 
-    // ルームを更新
     const updatedRoom = await prisma.room.update({
       where: { id: roomId },
       data: {
         name: name !== undefined ? name : undefined,
         description: description !== undefined ? description : undefined,
-        isPrivate: isPrivate !== undefined ? isPrivate : undefined,
       },
     });
 
@@ -137,7 +128,6 @@ export async function PATCH(
   }
 }
 
-// ルーム削除API
 export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ roomId: string }> }
@@ -157,7 +147,6 @@ export async function DELETE(
       return new NextResponse("ユーザーが見つかりません", { status: 404 });
     }
 
-    // ルームを取得
     const room = await prisma.room.findUnique({
       where: { id: roomId },
     });
@@ -166,12 +155,10 @@ export async function DELETE(
       return new NextResponse("ルームが見つかりません", { status: 404 });
     }
 
-    // ルーム作成者か確認
     if (room.creatorId !== user.id) {
       return new NextResponse("ルームの削除権限がありません", { status: 403 });
     }
 
-    // ルームを削除
     await prisma.room.delete({
       where: { id: roomId },
     });

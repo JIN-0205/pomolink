@@ -1,4 +1,5 @@
 import prisma from "@/lib/db";
+import { canUpload } from "@/lib/subscription-service";
 import { auth } from "@clerk/nextjs/server";
 import { getStorage } from "firebase-admin/storage";
 import { NextRequest, NextResponse } from "next/server";
@@ -11,9 +12,8 @@ export async function POST(req: NextRequest) {
     const { userId: clerkId } = await auth();
     if (!clerkId) return new NextResponse("未認証", { status: 401 });
 
-    // multipart/form-dataのパース
     const formData = await req.formData();
-    const files = formData.getAll("file"); // 複数ファイル対応
+    const files = formData.getAll("file");
     const taskId = formData.get("taskId");
     const sessionId = formData.get("sessionId");
     const description = formData.get("description");
@@ -22,10 +22,33 @@ export async function POST(req: NextRequest) {
       return new NextResponse("ファイルとtaskIdが必要です", { status: 400 });
     }
 
-    // ユーザー取得
     const user = await prisma.user.findUnique({ where: { clerkId } });
     if (!user)
       return new NextResponse("ユーザーが見つかりません", { status: 404 });
+
+    const task = await prisma.task.findUnique({
+      where: { id: taskId },
+      select: { roomId: true },
+    });
+
+    if (!task) {
+      return new NextResponse("タスクが見つかりません", { status: 404 });
+    }
+
+    const uploadCheck = await canUpload(task.roomId, user.id, files.length);
+    if (!uploadCheck.canUpload) {
+      return NextResponse.json(
+        {
+          error: uploadCheck.reason || "アップロード制限に達しました",
+          code: "UPLOAD_LIMIT_EXCEEDED",
+          currentCount: uploadCheck.currentCount,
+          maxCount: uploadCheck.maxCount,
+          planType: uploadCheck.planType,
+          limitType: uploadCheck.limitType,
+        },
+        { status: 403 }
+      );
+    }
 
     const bucket = getStorage().bucket();
     const uploadResults = [];
@@ -40,12 +63,10 @@ export async function POST(req: NextRequest) {
         contentType: file.type || "image/jpeg",
         public: false,
       });
-      // サイン付きURLを生成（1年有効）
       const [fileUrl] = await fileRef.getSignedUrl({
         action: "read",
         expires: Date.now() + 365 * 24 * 60 * 60 * 1000,
       });
-      // DBに記録
       const upload = await prisma.upload.create({
         data: {
           userId: user.id,
@@ -61,35 +82,27 @@ export async function POST(req: NextRequest) {
       });
       uploadResults.push(upload);
     }
-    // 提出ボーナス: 一日一回のみ
     if (uploadResults.length > 0) {
-      // タスクからroomIdを取得
-      const task = await prisma.task.findUnique({
-        where: { id: taskId },
-        select: { roomId: true },
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+      const existing = await prisma.pointHistory.findFirst({
+        where: {
+          userId: user.id,
+          roomId: task.roomId,
+          type: "SUBMISSION",
+          createdAt: { gte: startOfDay },
+        },
       });
-      if (task) {
-        const startOfDay = new Date();
-        startOfDay.setHours(0, 0, 0, 0);
-        const existing = await prisma.pointHistory.findFirst({
-          where: {
+      if (!existing) {
+        await prisma.pointHistory.create({
+          data: {
             userId: user.id,
             roomId: task.roomId,
             type: "SUBMISSION",
-            createdAt: { gte: startOfDay },
+            points: 1,
+            reason: "提出物提出ボーナス",
           },
         });
-        if (!existing) {
-          await prisma.pointHistory.create({
-            data: {
-              userId: user.id,
-              roomId: task.roomId,
-              type: "SUBMISSION",
-              points: 1,
-              reason: "提出物提出ボーナス",
-            },
-          });
-        }
       }
     }
     return NextResponse.json({ uploads: uploadResults });
@@ -107,7 +120,6 @@ export async function GET(req: NextRequest) {
       return new NextResponse("taskIdが必要です", { status: 400 });
     }
 
-    // 画像一覧取得
     const uploads = await prisma.upload.findMany({
       where: {
         taskId,

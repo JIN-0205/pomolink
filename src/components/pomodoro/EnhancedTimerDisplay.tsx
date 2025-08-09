@@ -15,6 +15,7 @@ interface EnhancedTimerDisplayProps {
   formatTime: (seconds: number) => string;
   workAlarmSound?: AlarmPreset;
   breakAlarmSound?: AlarmPreset;
+  soundVolume?: number;
 }
 
 export default function EnhancedTimerDisplay({
@@ -27,6 +28,7 @@ export default function EnhancedTimerDisplay({
   formatTime,
   workAlarmSound = "buzzer",
   breakAlarmSound = "levelup",
+  soundVolume = 0.5,
 }: EnhancedTimerDisplayProps) {
   const progress = ((totalTime - timeLeft) / totalTime) * 100;
   const isWorkTimer = timerType === "work";
@@ -40,27 +42,27 @@ export default function EnhancedTimerDisplay({
   const alarmPlayedRef = useRef(false);
 
   useEffect(() => {
-    console.log("Timer effect triggered:", {
-      prevTimeLeft: prevTimeLeftRef.current,
-      currentTimeLeft: timeLeft,
-      prevTimerState: prevTimerStateRef.current,
-      currentTimerState: timerState,
-      prevTimerType: prevTimerTypeRef.current,
-      currentTimerType: timerType,
-      workAlarmSound,
-      breakAlarmSound,
-      alarmPlayed: alarmPlayedRef.current,
-    });
+    // console.log("Timer effect triggered:", {
+    //   prevTimeLeft: prevTimeLeftRef.current,
+    //   currentTimeLeft: timeLeft,
+    //   prevTimerState: prevTimerStateRef.current,
+    //   currentTimerState: timerState,
+    //   prevTimerType: prevTimerTypeRef.current,
+    //   currentTimerType: timerType,
+    //   workAlarmSound,
+    //   breakAlarmSound,
+    //   alarmPlayed: alarmPlayedRef.current,
+    // });
 
     // 新しいタイマーが開始された場合（timeLeftが大幅に増加）、アラームフラグをリセット
     if (timeLeft > prevTimeLeftRef.current + 10) {
-      console.log("New timer started, resetting alarm flag");
+      // console.log("New timer started, resetting alarm flag");
       alarmPlayedRef.current = false;
     }
 
     // アラームが既に再生されている場合は早期リターン
     if (alarmPlayedRef.current) {
-      console.log("Alarm already played, skipping");
+      // console.log("Alarm already played, skipping");
       prevTimeLeftRef.current = timeLeft;
       prevTimerStateRef.current = timerState;
       prevTimerTypeRef.current = timerType;
@@ -122,14 +124,21 @@ export default function EnhancedTimerDisplay({
       });
 
       // アラームを再生し、フラグを設定
-      playTimerSound(endedTimerType, alarmSound);
+      playTimerSound(endedTimerType, alarmSound, soundVolume);
       alarmPlayedRef.current = true;
     }
 
     prevTimeLeftRef.current = timeLeft;
     prevTimerStateRef.current = timerState;
     prevTimerTypeRef.current = timerType;
-  }, [timeLeft, timerState, timerType, workAlarmSound, breakAlarmSound]);
+  }, [
+    timeLeft,
+    timerState,
+    timerType,
+    workAlarmSound,
+    breakAlarmSound,
+    soundVolume,
+  ]);
 
   return (
     <Card

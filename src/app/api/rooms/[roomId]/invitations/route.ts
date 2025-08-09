@@ -5,7 +5,6 @@ import { auth } from "@clerk/nextjs/server";
 import { InvitationMethod, UserRole } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 
-// 環境変数の確認
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL;
 if (!APP_URL) {
   console.warn(
@@ -36,7 +35,6 @@ export async function POST(
       );
     }
 
-    // ルームを取得
     const room = await prisma.room.findUnique({
       where: { id: roomId },
       include: {
@@ -53,7 +51,6 @@ export async function POST(
       );
     }
 
-    // ユーザーがルームの参加者であり、かつプランナーまたは作成者であるか確認
     const isParticipant = room.participants.length > 0;
     const isPlanner =
       isParticipant &&
@@ -66,11 +63,9 @@ export async function POST(
       );
     }
 
-    // リクエストのボディを取得
     const body = await req.json();
     const { email, role = "PERFORMER", method = "EMAIL", receiverId } = body;
 
-    // 参加者制限をチェック（メインプランナーのプランに基づく）
     const mainPlannerId = room.mainPlannerId || room.creatorId;
     const participantCheck = await canAddParticipant(roomId, mainPlannerId);
 
@@ -87,7 +82,6 @@ export async function POST(
       );
     }
 
-    // リクエストの検証
     if (method === "EMAIL" && !email) {
       return NextResponse.json(
         { error: "メールアドレスは必須です" },
@@ -96,7 +90,6 @@ export async function POST(
     }
 
     if (method === "LINK" && !room.inviteCode) {
-      // 招待コードが存在しない場合は生成
       room.inviteCode = await generateUniqueInviteCode();
       await prisma.room.update({
         where: { id: roomId },
@@ -104,21 +97,18 @@ export async function POST(
       });
     }
 
-    // 招待の有効期限（7日後）
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
 
-    // メソッドに応じた処理
     if (method === "EMAIL" && email) {
       try {
-        // メール招待を送信する前に、同じメールで既に招待済みか確認
         const existingInvitation = await prisma.invitation.findFirst({
           where: {
             roomId,
             email,
             status: "PENDING",
             expiresAt: {
-              gt: new Date(), // 期限切れでないもの
+              gt: new Date(),
             },
           },
         });
@@ -133,7 +123,6 @@ export async function POST(
           );
         }
 
-        // 同じメールアドレスのユーザーが既にルームに参加しているか確認
         const existingParticipant = await prisma.user.findFirst({
           where: {
             email,
@@ -152,7 +141,6 @@ export async function POST(
           );
         }
 
-        // 招待レコードを作成
         const invitation = await prisma.invitation.create({
           data: {
             email,
@@ -165,10 +153,8 @@ export async function POST(
           },
         });
 
-        // 招待リンクの作成
-        const inviteUrl = `${APP_URL}/join?code=${room.inviteCode}`;
+        const inviteUrl = `${APP_URL}/rooms/join?code=${room.inviteCode}`;
 
-        // メール送信
         const success = await sendInvitationEmail({
           email,
           senderName: user.name || "PomoLink メンバー",
@@ -179,13 +165,21 @@ export async function POST(
         });
 
         if (!success) {
-          // メール送信に失敗した場合、招待レコードを削除
           await prisma.invitation.delete({
             where: { id: invitation.id },
           });
 
+          console.error("メール送信に失敗しました:", {
+            email,
+            roomId,
+            roomName: room.name,
+          });
+
           return NextResponse.json(
-            { error: "メールの送信に失敗しました。後でもう一度お試しください" },
+            {
+              error:
+                "メールの送信に失敗しました。システム管理者にお問い合わせください。",
+            },
             { status: 500 }
           );
         }
@@ -196,23 +190,36 @@ export async function POST(
           invitationId: invitation.id,
         });
       } catch (error) {
+        console.error("メール招待処理でエラーが発生:", error);
+
         const errorMessage =
           error instanceof Error ? error.message : "不明なエラー";
+
+        if (
+          errorMessage.includes("ngrok") ||
+          errorMessage.includes("Service Unavailable")
+        ) {
+          return NextResponse.json(
+            {
+              error:
+                "ネットワークエラーが発生しました。開発環境の接続を確認してください。",
+            },
+            { status: 503 }
+          );
+        }
+
         return NextResponse.json(
           { error: `メール送信エラー: ${errorMessage}` },
           { status: 500 }
         );
       }
     } else if (method === "LINK") {
-      // 招待リンクのみを作成（データベースへの記録なし）
       return NextResponse.json({
         success: true,
         inviteCode: room.inviteCode,
-        inviteLink: `${APP_URL}/join?code=${room.inviteCode}`,
+        inviteLink: `${APP_URL}/rooms/join?code=${room.inviteCode}`,
       });
     } else if (method === "DIRECT" && receiverId) {
-      // 特定ユーザーへの直接招待
-      // ユーザーが存在するか確認
       const receiver = await prisma.user.findUnique({
         where: { id: receiverId },
       });
@@ -224,7 +231,6 @@ export async function POST(
         );
       }
 
-      // 既に参加しているか確認
       const isAlreadyMember = await prisma.roomParticipant.findUnique({
         where: {
           userId_roomId: {
@@ -241,7 +247,6 @@ export async function POST(
         );
       }
 
-      // 招待レコードを作成
       const invitation = await prisma.invitation.create({
         data: {
           receiverId,
@@ -271,21 +276,18 @@ export async function POST(
   }
 }
 
-// ユニークな招待コードを生成する関数
 async function generateUniqueInviteCode(length = 8): Promise<string> {
-  const characters = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // 紛らわしい文字を除外
+  const characters = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let result = "";
 
   for (let i = 0; i < length; i++) {
     result += characters.charAt(Math.floor(Math.random() * characters.length));
   }
 
-  // コードの一意性を確認
   const existingRoom = await prisma.room.findUnique({
     where: { inviteCode: result },
   });
 
-  // 既に存在する場合は再帰的に生成
   if (existingRoom) {
     return generateUniqueInviteCode(length);
   }

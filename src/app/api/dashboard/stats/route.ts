@@ -17,19 +17,16 @@ export async function GET() {
       return new NextResponse("ユーザーが見つかりません", { status: 404 });
     }
 
-    // 今日の開始時刻と終了時刻を計算
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    // 今週の開始時刻を計算（月曜日から）
     const weekStart = new Date(today);
     const dayOfWeek = today.getDay();
-    const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // 日曜日は6、月曜日は0
+    const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
     weekStart.setDate(today.getDate() - daysFromMonday);
 
-    // 統計データを並行して取得
     const [
       totalSessions,
       todaySessions,
@@ -38,7 +35,6 @@ export async function GET() {
       weeklyProgress,
       continuousStreak,
     ] = await Promise.all([
-      // 総ポモドーロ数（完了したセッション）
       prisma.session.count({
         where: {
           userId: user.id,
@@ -46,7 +42,6 @@ export async function GET() {
         },
       }),
 
-      // 今日のポモドーロ数
       prisma.session.count({
         where: {
           userId: user.id,
@@ -58,14 +53,12 @@ export async function GET() {
         },
       }),
 
-      // 参加中のアクティブルーム数
       prisma.roomParticipant.count({
         where: {
           userId: user.id,
         },
       }),
 
-      // 今月の完了タスク数
       prisma.task.count({
         where: {
           room: {
@@ -82,7 +75,6 @@ export async function GET() {
         },
       }),
 
-      // 今週の進捗（目標を週30ポモドーロと仮定）
       prisma.session.count({
         where: {
           userId: user.id,
@@ -93,7 +85,6 @@ export async function GET() {
         },
       }),
 
-      // 連続日数を計算するため、最近のセッション履歴を取得
       prisma.session.findMany({
         where: {
           userId: user.id,
@@ -105,11 +96,10 @@ export async function GET() {
         orderBy: {
           startTime: "desc",
         },
-        take: 100, // 最近100件を取得して連続日数を計算
+        take: 100,
       }),
     ]);
 
-    // 連続日数の計算
     let streak = 0;
     if (continuousStreak.length > 0) {
       const sessionDates = new Set(
@@ -118,8 +108,6 @@ export async function GET() {
         )
       );
 
-      // 今日または昨日から遡って連続日数をカウント
-      // 今日セッションがなくても昨日があれば連続とみなす
       // eslint-disable-next-line prefer-const
       let checkDate = new Date(today);
       if (!sessionDates.has(checkDate.toISOString().split("T")[0])) {
@@ -132,7 +120,6 @@ export async function GET() {
       }
     }
 
-    // 週間進捗率を計算（目標30ポモドーロに対する割合）
     const weeklyProgressPercentage = Math.min(
       Math.round((weeklyProgress / 30) * 100),
       100

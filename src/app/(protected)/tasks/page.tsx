@@ -54,7 +54,6 @@ export default function TasksPage() {
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [priorityFilter, setPriorityFilter] = useState<string>("ALL");
 
-  // パフォーマーとして参加しているルーム一覧を取得
   const fetchPerformerRooms = async (): Promise<Room[]> => {
     const res = await fetch("/api/rooms?role=PERFORMER");
     if (!res.ok) throw new Error("ルームの取得に失敗しました");
@@ -62,7 +61,6 @@ export default function TasksPage() {
     return data.map((item) => item.room);
   };
 
-  // ルームのタスク一覧を取得
   const fetchRoomTasks = async (roomId: string): Promise<Task[]> => {
     const res = await fetch(`/api/rooms/${roomId}/tasks`);
     if (!res.ok) throw new Error("タスクの取得に失敗しました");
@@ -77,10 +75,8 @@ export default function TasksPage() {
       try {
         setLoading(true);
 
-        // パフォーマーとして参加しているルーム一覧を取得
         const performerRooms = await fetchPerformerRooms();
 
-        // 各ルームのタスクを取得
         const roomsWithTasks: RoomWithTasks[] = await Promise.all(
           performerRooms.map(async (room) => {
             try {
@@ -107,21 +103,17 @@ export default function TasksPage() {
     fetchData();
   }, [isLoaded, user]);
 
-  // タスクの検索・フィルタリング
   const getFilteredTasks = (tasks: Task[]) => {
     return tasks.filter((task) => {
-      // 検索クエリ
       const matchesSearch =
         searchQuery === "" ||
         task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (task.description &&
           task.description.toLowerCase().includes(searchQuery.toLowerCase()));
 
-      // ステータスフィルター
       const matchesStatus =
         statusFilter === "ALL" || task.status === statusFilter;
 
-      // 優先度フィルター
       const matchesPriority =
         priorityFilter === "ALL" || task.priority === priorityFilter;
 
@@ -129,7 +121,6 @@ export default function TasksPage() {
     });
   };
 
-  // 全タスクの統計
   const getAllTasksStats = () => {
     const allTasks = rooms.flatMap((room) => room.tasks);
     const filteredTasks = rooms.flatMap((room) => getFilteredTasks(room.tasks));
@@ -206,15 +197,13 @@ export default function TasksPage() {
 
   return (
     <div className="container py-6 space-y-6">
-      {/* ヘッダー */}
       <div className="flex flex-col space-y-4">
-        <h1 className="text-3xl font-bold">マイタスク</h1>
+        <h1 className="text-3xl font-bold">タスク</h1>
         <p className="text-muted-foreground">
           パフォーマーとして参加しているルームのタスクを管理できます
         </p>
       </div>
 
-      {/* 統計カード */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-4">
@@ -265,7 +254,6 @@ export default function TasksPage() {
         </Card>
       </div>
 
-      {/* 検索・フィルター */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -303,7 +291,6 @@ export default function TasksPage() {
         </Select>
       </div>
 
-      {/* ルーム別タスク表示 */}
       {rooms.length === 0 ? (
         <Card>
           <CardContent className="p-8 text-center">
@@ -327,7 +314,7 @@ export default function TasksPage() {
                 statusFilter !== "ALL" ||
                 priorityFilter !== "ALL")
             ) {
-              return null; // フィルター条件に一致するタスクがない場合は表示しない
+              return null;
             }
 
             return (

@@ -1,4 +1,5 @@
 import prisma from "@/lib/db";
+import { getDefaultPlanForUser, isTestMode } from "@/lib/subscription-flag";
 import { getPlanName, PLAN_LIMITS, PlanType } from "@/lib/subscription-limits";
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
@@ -11,7 +12,16 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Clerkから現在のプランを取得
+    if (isTestMode()) {
+      const testPlan = getDefaultPlanForUser();
+      return NextResponse.json({
+        planType: testPlan,
+        planName: getPlanName(testPlan),
+        planLimits: PLAN_LIMITS[testPlan],
+        isTestMode: true,
+      });
+    }
+
     let currentPlanType: PlanType = "FREE";
     if (has({ plan: "premium_user" })) {
       currentPlanType = "PREMIUM";
@@ -19,24 +29,21 @@ export async function GET() {
       currentPlanType = "BASIC";
     }
 
-    // データベースからユーザーを取得（存在しない場合は作成）
     let user = await prisma.user.findUnique({
       where: { clerkId: userId },
       select: { id: true, planType: true, clerkId: true },
     });
 
     if (!user) {
-      // ユーザーが存在しない場合は作成
       user = await prisma.user.create({
         data: {
           clerkId: userId,
-          email: "", // Clerkから取得する場合は別途実装
+          email: "",
           planType: currentPlanType,
         },
         select: { id: true, planType: true, clerkId: true },
       });
     } else if (user.planType !== currentPlanType) {
-      // データベースのプランタイプが異なる場合は更新
       user = await prisma.user.update({
         where: { clerkId: userId },
         data: { planType: currentPlanType },
@@ -52,15 +59,17 @@ export async function GET() {
       planType: currentPlanType,
       planName: getPlanName(currentPlanType),
       planLimits: PLAN_LIMITS[currentPlanType],
+      isTestMode: false,
     });
   } catch (error) {
     console.error("Failed to get user plan:", error);
 
-    // エラーの場合はFREEプランとして返す
+    const fallbackPlan = isTestMode() ? getDefaultPlanForUser() : "FREE";
     return NextResponse.json({
-      planType: "FREE",
-      planName: getPlanName("FREE"),
-      planLimits: PLAN_LIMITS.FREE,
+      planType: fallbackPlan,
+      planName: getPlanName(fallbackPlan),
+      planLimits: PLAN_LIMITS[fallbackPlan],
+      isTestMode: isTestMode(),
     });
   }
 }

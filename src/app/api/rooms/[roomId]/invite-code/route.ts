@@ -1,4 +1,3 @@
-// src/app/api/rooms/[roomId]/invite-code/route.ts
 import prisma from "@/lib/db";
 import { generateInviteCode } from "@/lib/utils";
 import { auth } from "@clerk/nextjs/server";
@@ -9,7 +8,6 @@ export async function POST(
   { params }: { params: Promise<{ roomId: string }> }
 ) {
   try {
-    // 認証
     const { userId } = await auth();
     if (!userId) {
       return new NextResponse("認証が必要です", { status: 401 });
@@ -23,7 +21,6 @@ export async function POST(
       return new NextResponse("ユーザーが見つかりません", { status: 404 });
     }
 
-    // ルームと権限の確認
     const roomId = (await params).roomId;
     const room = await prisma.room.findUnique({
       where: { id: roomId },
@@ -40,7 +37,6 @@ export async function POST(
       return new NextResponse("ルームが見つかりません", { status: 404 });
     }
 
-    // 権限チェック - 作成者またはプランナーのみ招待コードをリセット可能
     const isCreator = room.creatorId === user.id;
     const isPlanner = room.participants.some((p) => p.role === "PLANNER");
 
@@ -50,15 +46,12 @@ export async function POST(
       });
     }
 
-    // 新しい招待コードを生成
     const newInviteCode = await generateInviteCode();
 
-    // 一意性を確保（重複チェック）
     const existingRoomWithCode = await prisma.room.findUnique({
       where: { inviteCode: newInviteCode },
     });
 
-    // 万が一重複する場合は再生成
     if (existingRoomWithCode) {
       const retryCode = await generateInviteCode();
 
@@ -73,7 +66,6 @@ export async function POST(
       });
     }
 
-    // 招待コードを更新
     const updatedRoom = await prisma.room.update({
       where: { id: roomId },
       data: { inviteCode: newInviteCode },

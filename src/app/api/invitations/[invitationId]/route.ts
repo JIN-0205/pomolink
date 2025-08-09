@@ -1,16 +1,13 @@
-// app/api/invitations/[invitationId]/route.ts
 import prisma from "@/lib/db";
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 
-// 招待詳細取得API
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ invitationId: string }> }
 ) {
   try {
     const { invitationId } = await params;
-    // 招待IDで招待を取得
     const invitation = await prisma.invitation.findUnique({
       where: { id: invitationId },
       include: {
@@ -35,9 +32,7 @@ export async function GET(
       return new NextResponse("招待が見つかりません", { status: 404 });
     }
 
-    // 招待が期限切れか確認
     if (invitation.expiresAt && new Date() > invitation.expiresAt) {
-      // 期限切れなら更新
       await prisma.invitation.update({
         where: { id: invitationId },
         data: { status: "EXPIRED" },
@@ -46,7 +41,6 @@ export async function GET(
       return new NextResponse("招待の期限が切れています", { status: 410 });
     }
 
-    // 既に処理済みか確認
     if (invitation.status !== "PENDING") {
       return new NextResponse(
         `招待は既に${
@@ -62,8 +56,6 @@ export async function GET(
     return new NextResponse("内部エラー", { status: 500 });
   }
 }
-
-// 招待応答API（承認/拒否）
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ invitationId: string }> }
@@ -89,7 +81,6 @@ export async function PATCH(
     }
 
     const { invitationId } = await params;
-    // 招待を取得
     const invitation = await prisma.invitation.findUnique({
       where: { id: invitationId },
       include: {
@@ -105,21 +96,18 @@ export async function PATCH(
       return new NextResponse("招待が見つかりません", { status: 404 });
     }
 
-    // 招待対象者確認
     if (invitation.receiverId && invitation.receiverId !== user.id) {
       return new NextResponse("この招待を処理する権限がありません", {
         status: 403,
       });
     }
 
-    // メールのみの招待の場合、メールアドレスが一致するか確認
     if (!invitation.receiverId && invitation.email !== user.email) {
       return new NextResponse("この招待を処理する権限がありません", {
         status: 403,
       });
     }
 
-    // 招待が期限切れか確認
     if (invitation.expiresAt && new Date() > invitation.expiresAt) {
       await prisma.invitation.update({
         where: { id: invitationId },
@@ -129,7 +117,6 @@ export async function PATCH(
       return new NextResponse("招待の期限が切れています", { status: 410 });
     }
 
-    // 既に処理済みか確認
     if (invitation.status !== "PENDING") {
       return new NextResponse(
         `招待は既に${
@@ -139,18 +126,15 @@ export async function PATCH(
       );
     }
 
-    // 招待を更新
     const updatedInvitation = await prisma.invitation.update({
       where: { id: invitationId },
       data: {
         status,
-        receiverId: user.id, // メールのみの招待だった場合は受信者IDを設定
+        receiverId: user.id,
       },
     });
 
-    // 承認の場合はルームに参加者として追加
     if (status === "ACCEPTED") {
-      // 既に参加しているか確認
       const isAlreadyParticipant = invitation.room.participants.some(
         (p) => p.userId === user.id
       );
@@ -173,7 +157,6 @@ export async function PATCH(
   }
 }
 
-// 招待削除API
 export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ invitationId: string }> }
@@ -193,7 +176,6 @@ export async function DELETE(
     }
 
     const { invitationId } = await params;
-    // 招待を取得
     const invitation = await prisma.invitation.findUnique({
       where: { id: invitationId },
       include: {
@@ -209,7 +191,6 @@ export async function DELETE(
       return new NextResponse("招待が見つかりません", { status: 404 });
     }
 
-    // 招待対象者確認
     if (
       invitation.senderId !== user.id &&
       invitation.room.creatorId !== user.id
@@ -219,7 +200,6 @@ export async function DELETE(
       });
     }
 
-    // ステータスチェック: PENDINGステータスの招待のみ取り消し可能
     if (invitation.status !== "PENDING") {
       return new NextResponse(
         `既に${
@@ -229,7 +209,6 @@ export async function DELETE(
       );
     }
 
-    // 招待を削除
     await prisma.invitation.delete({
       where: { id: invitationId },
     });

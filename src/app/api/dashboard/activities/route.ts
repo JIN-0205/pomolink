@@ -17,10 +17,8 @@ export async function GET() {
       return new NextResponse("ユーザーが見つかりません", { status: 404 });
     }
 
-    // 最近のアクティビティを取得（セッション完了、タスク完了、ルーム参加）
     const [recentSessions, recentTasks, recentParticipations] =
       await Promise.all([
-        // 最近完了したポモドーロセッション
         prisma.session.findMany({
           where: {
             userId: user.id,
@@ -39,7 +37,6 @@ export async function GET() {
           take: 5,
         }),
 
-        // 最近完了したタスク
         prisma.task.findMany({
           where: {
             room: {
@@ -60,7 +57,6 @@ export async function GET() {
           take: 5,
         }),
 
-        // 最近参加したルーム
         prisma.roomParticipant.findMany({
           where: {
             userId: user.id,
@@ -74,8 +70,6 @@ export async function GET() {
           take: 3,
         }),
       ]);
-
-    // アクティビティを統合してソート
     interface Activity {
       type: string;
       action: string;
@@ -85,7 +79,6 @@ export async function GET() {
 
     const activities: Activity[] = [];
 
-    // ポモドーロ完了アクティビティ
     recentSessions.forEach((session) => {
       if (session.endTime) {
         activities.push({
@@ -97,7 +90,6 @@ export async function GET() {
       }
     });
 
-    // タスク完了アクティビティ
     recentTasks.forEach((task) => {
       activities.push({
         type: "task_completed",
@@ -107,7 +99,6 @@ export async function GET() {
       });
     });
 
-    // ルーム参加アクティビティ
     recentParticipations.forEach((participation) => {
       activities.push({
         type: "room_joined",
@@ -117,13 +108,11 @@ export async function GET() {
       });
     });
 
-    // 時刻でソートして最新10件を取得
     activities.sort(
       (a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()
     );
     const recentActivities = activities.slice(0, 10);
 
-    // 相対時間を計算
     const now = new Date();
     const activitiesWithRelativeTime = recentActivities.map((activity) => {
       const activityTime = new Date(activity.time);

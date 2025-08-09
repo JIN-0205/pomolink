@@ -134,6 +134,7 @@ export function TaskProposalManager({
       }
 
       const data = await response.json();
+      console.log("Review response:", data);
 
       toast.success(
         status === "APPROVED" ? "提案を承認しました" : "提案を拒否しました",
@@ -143,7 +144,7 @@ export function TaskProposalManager({
       );
 
       setReviewNote("");
-      router.refresh();
+      router.push(`/rooms/${roomId}/tasks/${data.task.id}/edit`);
     } catch (error) {
       console.error(error);
       toast.error("エラー", {

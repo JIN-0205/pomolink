@@ -1,6 +1,5 @@
 import type { AlarmPreset } from "./types";
 
-/** アラーム音のプリセット定義 */
 const presets: Record<
   AlarmPreset,
   (ctx: AudioContext, t0: number, g: GainNode) => number
@@ -22,7 +21,7 @@ const presets: Record<
 
   siren(ctx, t, g) {
     const o = osc(ctx, 650, "sine", g);
-    const STEP = 0.25; // 2 Hz
+    const STEP = 0.25;
     for (let i = 0; i < 12; i++) {
       const f = i % 2 ? 650 : 990;
       o.frequency.linearRampToValueAtTime(f, t + (i + 1) * STEP);
@@ -37,7 +36,6 @@ const presets: Record<
     const GAP = 0.25;
     let dt = 0;
     for (let r = 0; r < 3; r++) {
-      // 3 回繰り返す
       dt += arpeggio(ctx, t + dt, g, [660, 880, 660], NOTE, "sine");
       dt += GAP;
     }
@@ -45,11 +43,10 @@ const presets: Record<
   },
 
   retro(ctx, t, g) {
-    const NOTE = 0.09; // 1 音の長さ
-    const GAP = 0.25; // セット間の休止
+    const NOTE = 0.09;
+    const GAP = 0.25;
     let dt = 0;
     for (let r = 0; r < 3; r++) {
-      // 3 回繰り返す
       dt += arpeggio(
         ctx,
         t + dt,
@@ -58,49 +55,36 @@ const presets: Record<
         NOTE,
         "square"
       );
-      dt += GAP; // セット間インターバル
+      dt += GAP;
     }
     return dt;
   },
 
   levelup(ctx, t, g) {
-    // ドラゴンクエストのレベルアップ音「テレテレッテッテッテー」
     let dt = 0;
 
-    // 3回繰り返し
     for (let r = 0; r < 3; r++) {
-      // テレテレッテッテッテー のメロディー
-      // G4  G4  C5  G4  C5  E5ー (音程とリズム)
-
-      // テ (短)
-      tone(ctx, t + dt, 392.0, 0.1, "square", g); // G4
+      tone(ctx, t + dt, 392.0, 0.1, "square", g);
       dt += 0.12;
 
-      // レ (短)
-      tone(ctx, t + dt, 392.0, 0.1, "square", g); // G4
+      tone(ctx, t + dt, 392.0, 0.1, "square", g);
       dt += 0.12;
 
-      // テ (短・高め)
-      tone(ctx, t + dt, 523.25, 0.1, "square", g); // C5
+      tone(ctx, t + dt, 523.25, 0.1, "square", g);
       dt += 0.12;
 
-      // ッ (短)
-      tone(ctx, t + dt, 392.0, 0.08, "square", g); // G4
+      tone(ctx, t + dt, 392.0, 0.08, "square", g);
       dt += 0.1;
 
-      // テ (短・高め)
-      tone(ctx, t + dt, 523.25, 0.08, "square", g); // C5
+      tone(ctx, t + dt, 523.25, 0.08, "square", g);
       dt += 0.1;
 
-      // ッ (短・さらに高め)
-      tone(ctx, t + dt, 659.25, 0.08, "square", g); // E5
+      tone(ctx, t + dt, 659.25, 0.08, "square", g);
       dt += 0.1;
 
-      // テー (長め・クライマックス)
-      tone(ctx, t + dt, 659.25, 0.3, "square", g); // E5
+      tone(ctx, t + dt, 659.25, 0.3, "square", g);
       dt += 0.35;
 
-      // セット間の休止（最後以外）
       if (r < 2) {
         dt += 0.25;
       }
@@ -110,9 +94,6 @@ const presets: Record<
   },
 };
 
-/* ========== 共通ユーティリティ ========== */
-
-/** 単音トーン生成 */
 function tone(
   ctx: AudioContext,
   t: number,
@@ -127,7 +108,6 @@ function tone(
   o.stop(t + len);
 }
 
-/** オシレータ生成だけ分離 */
 const osc = (
   ctx: AudioContext,
   freq: number,
@@ -143,7 +123,6 @@ const osc = (
   return o;
 };
 
-/** アルペジオ系：順番に複数トーン鳴らす */
 function arpeggio(
   ctx: AudioContext,
   t: number,
@@ -161,14 +140,11 @@ function arpeggio(
   return dt;
 }
 
-// アラーム再生中フラグ（グローバルで管理）
 let isAlarmPlaying = false;
 
-/** アラーム音を再生する関数 */
-export function playAlarm(preset: AlarmPreset) {
-  console.log("playAlarm called with preset:", preset);
+export function playAlarm(preset: AlarmPreset, volume = 0.5) {
+  console.log("playAlarm called with preset:", preset, "volume:", volume);
 
-  // 既に再生中の場合は重複を防ぐ
   if (isAlarmPlaying) {
     console.log("Alarm already playing, skipping duplicate");
     return;
@@ -187,37 +163,34 @@ export function playAlarm(preset: AlarmPreset) {
   try {
     const ctx = new AC();
 
-    // アラーム再生中フラグを設定
     isAlarmPlaying = true;
 
-    // AudioContextの状態をチェック
     console.log("AudioContext state:", ctx.state);
 
-    // もしsuspendedなら resume する
     if (ctx.state === "suspended") {
       console.log("Resuming suspended AudioContext");
       ctx
         .resume()
         .then(() => {
           console.log("AudioContext resumed successfully");
-          playAlarmSound(ctx, preset);
+          playAlarmSound(ctx, preset, volume);
         })
         .catch((error) => {
           console.error("Failed to resume AudioContext:", error);
-          isAlarmPlaying = false; // エラー時はフラグをリセット
+          isAlarmPlaying = false;
         });
     } else {
-      playAlarmSound(ctx, preset);
+      playAlarmSound(ctx, preset, volume);
     }
   } catch (error) {
     console.error("Error playing alarm:", error);
-    isAlarmPlaying = false; // エラー時はフラグをリセット
+    isAlarmPlaying = false;
   }
 }
 
-function playAlarmSound(ctx: AudioContext, preset: AlarmPreset) {
+function playAlarmSound(ctx: AudioContext, preset: AlarmPreset, volume = 0.5) {
   const gain = ctx.createGain();
-  gain.gain.value = 0.15; // 全体音量（0.0–1.0）
+  gain.gain.value = volume; // 音量設定を使用
   gain.connect(ctx.destination);
 
   const t0 = ctx.currentTime;
@@ -225,7 +198,7 @@ function playAlarmSound(ctx: AudioContext, preset: AlarmPreset) {
 
   if (!presetFunction) {
     console.error("Preset not found:", preset);
-    isAlarmPlaying = false; // エラー時はフラグをリセット
+    isAlarmPlaying = false;
     return;
   }
 
@@ -233,32 +206,27 @@ function playAlarmSound(ctx: AudioContext, preset: AlarmPreset) {
   const duration = presetFunction(ctx, t0, gain);
   console.log("Preset duration:", duration);
 
-  /* 参考：必要なら終了後に Context を解放 */
   if (duration) {
     setTimeout(
       () => {
         console.log("Closing audio context for preset:", preset);
         ctx.close();
-        isAlarmPlaying = false; // 再生終了時にフラグをリセット
+        isAlarmPlaying = false;
       },
       duration * 1000 + 500
     );
   } else {
-    // durationが0の場合も即座にフラグをリセット
     setTimeout(() => {
       isAlarmPlaying = false;
     }, 100);
   }
 }
 
-// フォールバック音再生中フラグ
 let isFallbackPlaying = false;
 
-/** フォールバック音を再生する関数 */
-export function playFallbackSound(type: "work" | "break") {
-  console.log("Playing fallback sound for type:", type);
+export function playFallbackSound(type: "work" | "break", volume = 0.5) {
+  console.log("Playing fallback sound for type:", type, "volume:", volume);
 
-  // 既に再生中の場合は重複を防ぐ
   if (isFallbackPlaying) {
     console.log("Fallback sound already playing, skipping duplicate");
     return;
@@ -279,17 +247,13 @@ export function playFallbackSound(type: "work" | "break") {
 
     const audioContext = new AudioContextConstructor();
 
-    // フォールバック音再生中フラグを設定
     isFallbackPlaying = true;
 
-    // AudioContextの状態をチェック
     console.log("Fallback AudioContext state:", audioContext.state);
 
     const playSound = () => {
       const frequencies =
-        type === "work"
-          ? [523.25, 659.25, 783.99] // C5, E5, G5 (明るいメジャーコード)
-          : [349.23, 440.0, 523.25]; // F4, A4, C5 (やわらかい音)
+        type === "work" ? [523.25, 659.25, 783.99] : [349.23, 440.0, 523.25];
 
       console.log("Playing fallback frequencies:", frequencies);
 
@@ -303,10 +267,9 @@ export function playFallbackSound(type: "work" | "break") {
         oscillator.frequency.setValueAtTime(freq, audioContext.currentTime);
         oscillator.type = "sine";
 
-        // 音量の変化（フェードイン・フェードアウト）
         gainNode.gain.setValueAtTime(0, audioContext.currentTime);
         gainNode.gain.linearRampToValueAtTime(
-          0.1,
+          volume * 0.2, // 音量設定を反映 (最大音量の20%まで)
           audioContext.currentTime + 0.1
         );
         gainNode.gain.exponentialRampToValueAtTime(
@@ -318,7 +281,6 @@ export function playFallbackSound(type: "work" | "break") {
         oscillator.stop(audioContext.currentTime + 0.5 + index * 0.1);
       });
 
-      // 最後の音が終わったらフラグをリセット
       setTimeout(
         () => {
           isFallbackPlaying = false;
@@ -327,7 +289,6 @@ export function playFallbackSound(type: "work" | "break") {
       );
     };
 
-    // もしsuspendedなら resume する
     if (audioContext.state === "suspended") {
       console.log("Resuming suspended fallback AudioContext");
       audioContext
@@ -338,27 +299,30 @@ export function playFallbackSound(type: "work" | "break") {
         })
         .catch((error) => {
           console.error("Failed to resume fallback AudioContext:", error);
-          isFallbackPlaying = false; // エラー時はフラグをリセット
+          isFallbackPlaying = false;
         });
     } else {
       playSound();
     }
   } catch (error) {
     console.log("効果音の再生に失敗しました:", error);
-    isFallbackPlaying = false; // エラー時はフラグをリセット
+    isFallbackPlaying = false;
   }
 }
 
-/** タイマー音を再生する統合関数 */
-export function playTimerSound(type: "work" | "break", preset?: AlarmPreset) {
-  console.log("playTimerSound called:", { type, preset });
+export function playTimerSound(
+  type: "work" | "break",
+  preset?: AlarmPreset,
+  volume = 0.5
+) {
+  console.log("playTimerSound called:", { type, preset, volume });
 
   if (preset) {
     console.log("Playing alarm preset:", preset);
-    playAlarm(preset);
+    playAlarm(preset, volume);
     return;
   }
 
   console.log("Playing fallback sound for type:", type);
-  playFallbackSound(type);
+  playFallbackSound(type, volume);
 }

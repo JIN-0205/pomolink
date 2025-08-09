@@ -1,3 +1,4 @@
+import { Toaster } from "@/components/ui/sonner";
 import { clerkJa } from "@/locales/ja/clerk-ja";
 import { ClerkProvider } from "@clerk/nextjs";
 import { type Metadata } from "next";
@@ -31,6 +32,7 @@ export default function RootLayout({
           className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen bg-gray-50 text-gray-900`}
         >
           <div className="flex-1 overflow-auto">{children}</div>
+          <Toaster />
         </body>
       </html>
     </ClerkProvider>

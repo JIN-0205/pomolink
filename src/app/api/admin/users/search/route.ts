@@ -12,7 +12,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // 管理者権限をチェック（実装に応じて調整）
     const user = await prisma.user.findUnique({
       where: { id: userId },
     });
@@ -42,9 +41,14 @@ export async function GET(request: NextRequest) {
         },
       },
       include: {
-        subscription: true,
+        _count: {
+          select: {
+            participantRooms: true,
+            sessions: true,
+          },
+        },
       },
-      take: 10, // 最大10件まで
+      take: 10,
     });
 
     return NextResponse.json({ users });

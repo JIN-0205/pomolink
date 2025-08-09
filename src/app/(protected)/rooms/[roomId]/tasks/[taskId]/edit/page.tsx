@@ -47,14 +47,13 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import * as z from "zod";
 
-// バリデーションスキーマ
 const formSchema = z.object({
   title: z.string().min(1, "タイトルは必須です"),
   description: z.string().optional(),
   priority: z.enum(["LOW", "MEDIUM", "HIGH"]),
   estimatedPomos: z.coerce.number().min(1).optional().nullable(),
   dueDate: z.date().optional().nullable(),
-  workDuration: z.coerce.number().min(5).max(90).optional(),
+  workDuration: z.coerce.number().min(1).max(60).optional(),
   breakDuration: z.coerce.number().min(1).max(30).optional(),
 });
 
@@ -71,7 +70,6 @@ export default function EditTaskPage({ params }: EditTaskPageProps) {
   const router = useRouter();
   const { user } = useUser();
 
-  // paramsをReact.use()でアンラップ
   const resolvedParams = React.use(params);
   const { roomId, taskId } = resolvedParams;
 
@@ -83,7 +81,6 @@ export default function EditTaskPage({ params }: EditTaskPageProps) {
 
   const { isPlanner } = getUserRole(room, currentUserDbId);
 
-  // フォーム設定
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -97,7 +94,6 @@ export default function EditTaskPage({ params }: EditTaskPageProps) {
     },
   });
 
-  // ユーザー情報取得
   useEffect(() => {
     const fetchUserDbId = async () => {
       if (!user?.id) return;
@@ -116,7 +112,6 @@ export default function EditTaskPage({ params }: EditTaskPageProps) {
     fetchUserDbId();
   }, [user?.id]);
 
-  // ルーム情報取得
   useEffect(() => {
     const fetchRoomDetails = async () => {
       try {
@@ -139,7 +134,6 @@ export default function EditTaskPage({ params }: EditTaskPageProps) {
     }
   }, [roomId, router]);
 
-  // タスク情報取得
   useEffect(() => {
     const fetchTaskDetails = async () => {
       try {
@@ -156,7 +150,6 @@ export default function EditTaskPage({ params }: EditTaskPageProps) {
         const data = await res.json();
         setTask(data);
 
-        // フォームにデータを設定
         form.reset({
           title: data.title,
           description: data.description || "",
@@ -182,7 +175,6 @@ export default function EditTaskPage({ params }: EditTaskPageProps) {
     }
   }, [taskId, form, roomId, router]);
 
-  // 権限チェック
   useEffect(() => {
     if (!isLoading && currentUserDbId && room && !isPlanner) {
       toast("エラー", {
@@ -192,12 +184,10 @@ export default function EditTaskPage({ params }: EditTaskPageProps) {
     }
   }, [isPlanner, isLoading, currentUserDbId, room, router, roomId, taskId]);
 
-  // タスク更新処理
   const onSubmit = async (values: FormValues) => {
     try {
       setIsSubmitting(true);
 
-      // データの前処理と型変換
       const requestData = {
         title: values.title,
         description: values.description || null,
@@ -236,7 +226,6 @@ export default function EditTaskPage({ params }: EditTaskPageProps) {
         description: "タスクを更新しました",
       });
 
-      // タスク詳細ページに遷移
       router.push(`/rooms/${roomId}/tasks/${taskId}`);
     } catch (error) {
       console.error("タスク更新エラー:", error);
@@ -441,8 +430,8 @@ export default function EditTaskPage({ params }: EditTaskPageProps) {
                       <FormControl>
                         <Input
                           type="number"
-                          min={5}
-                          max={90}
+                          min={1}
+                          max={60}
                           placeholder="25"
                           {...field}
                           value={field.value || ""}
@@ -455,7 +444,7 @@ export default function EditTaskPage({ params }: EditTaskPageProps) {
                         />
                       </FormControl>
                       <FormDescription>
-                        5分〜90分の範囲で設定してください（推奨：25分）
+                        5分〜60分の範囲で設定してください（推奨：25分）
                       </FormDescription>
                       <FormMessage />
                     </FormItem>

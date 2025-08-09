@@ -1,9 +1,7 @@
-// app/api/tasks/[taskId]/route.ts
 import { default as db, default as prisma } from "@/lib/db";
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 
-// タスク詳細取得API
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ taskId: string }> }
@@ -22,7 +20,6 @@ export async function GET(
       return new NextResponse("ユーザーが見つかりません", { status: 404 });
     }
 
-    // タスクを取得
     const { taskId } = await params;
     const task = await prisma.task.findUnique({
       where: { id: taskId },
@@ -42,7 +39,6 @@ export async function GET(
       return new NextResponse("タスクが見つかりません", { status: 404 });
     }
 
-    // ユーザーがルームに参加しているか確認
     const isParticipant = task.room.participants.some(
       (p) => p.userId === user.id
     );
@@ -58,7 +54,6 @@ export async function GET(
   }
 }
 
-// タスク更新API
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ taskId: string }> }
@@ -80,7 +75,6 @@ export async function PATCH(
       );
     }
 
-    // リクエストボディの解析
     let requestBody;
     try {
       requestBody = await req.json();
@@ -91,10 +85,6 @@ export async function PATCH(
         { status: 400 }
       );
     }
-
-    // デバッグ用: 生のリクエストボディをログ出力
-    console.log("生のリクエストボディ:", JSON.stringify(requestBody, null, 2));
-    console.log("リクエストボディのキー:", Object.keys(requestBody));
 
     const {
       title,
@@ -120,7 +110,6 @@ export async function PATCH(
       breakDuration,
     });
 
-    // 入力データのバリデーション
     if (
       title !== undefined &&
       (typeof title !== "string" || title.trim() === "")
@@ -144,11 +133,11 @@ export async function PATCH(
     if (
       workDuration !== undefined &&
       (typeof workDuration !== "number" ||
-        workDuration < 5 ||
-        workDuration > 90)
+        workDuration < 1 ||
+        workDuration > 60)
     ) {
       return NextResponse.json(
-        { message: "作業時間は5分から90分の間で設定してください" },
+        { message: "作業時間は1分から60分の間で設定してください" },
         { status: 400 }
       );
     }
@@ -165,7 +154,6 @@ export async function PATCH(
       );
     }
 
-    // タスクを取得
     const { taskId } = await params;
     const task = await prisma.task.findUnique({
       where: { id: taskId },
@@ -185,7 +173,6 @@ export async function PATCH(
       );
     }
 
-    // ユーザーの参加情報を取得
     const participant = task.room.participants.find(
       (p) => p.userId === user.id
     );
@@ -197,7 +184,6 @@ export async function PATCH(
       );
     }
 
-    // PLANNERはすべての変更が可能、PERFORMERはステータスとcompletedPomosのみ変更可能
     if (
       participant.role !== "PLANNER" &&
       (title !== undefined ||
@@ -214,7 +200,6 @@ export async function PATCH(
       );
     }
 
-    // 型安全な更新データを構築
     const updateData: Record<string, unknown> = {};
 
     if (title !== undefined) updateData.title = title.trim();
@@ -245,7 +230,6 @@ export async function PATCH(
   } catch (error) {
     console.error("[TASK_PATCH] エラー詳細:", error);
 
-    // Prismaエラーの詳細な処理
     if (error && typeof error === "object" && "code" in error) {
       const prismaError = error as { code: string; message: string };
       if (prismaError.code === "P2002") {
@@ -271,7 +255,6 @@ export async function PATCH(
   }
 }
 
-// タスク削除API
 export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ taskId: string }> }
@@ -291,7 +274,6 @@ export async function DELETE(
     }
 
     const { taskId } = await params;
-    // タスクを取得
     const task = await db.task.findUnique({
       where: { id: taskId },
       include: {
@@ -307,7 +289,6 @@ export async function DELETE(
       return new NextResponse("タスクが見つかりません", { status: 404 });
     }
 
-    // ユーザーの参加情報を取得
     const participant = task.room.participants.find(
       (p) => p.userId === user.id
     );
@@ -316,12 +297,10 @@ export async function DELETE(
       return new NextResponse("アクセス権限がありません", { status: 403 });
     }
 
-    // PLANNERロールのみがタスクを削除できる
     if (participant.role !== "PLANNER") {
       return new NextResponse("タスクの削除権限がありません", { status: 403 });
     }
 
-    // タスクを削除（関連するセッションも自動で削除される）
     await db.task.delete({
       where: { id: taskId },
     });

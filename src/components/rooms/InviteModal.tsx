@@ -1,4 +1,3 @@
-// src/components/rooms/InviteModal.tsx (修正版)
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -26,7 +25,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
@@ -40,34 +38,7 @@ const emailInviteSchema = z.object({
   role: z.enum(["PLANNER", "PERFORMER"]),
 });
 
-const userInviteSchema = z.object({
-  userId: z.string().min(1, "ユーザーIDは必須です"),
-  role: z.enum(["PLANNER", "PERFORMER"]),
-});
-
 type EmailInviteValues = z.infer<typeof emailInviteSchema>;
-type UserInviteValues = z.infer<typeof userInviteSchema>;
-
-// 招待データの共通型を定義
-type InvitationMethod = "LINK" | "EMAIL";
-type InvitationRole = "PLANNER" | "PERFORMER";
-
-// メール招待データの型
-interface EmailInvitationData {
-  email: string;
-  role: InvitationRole;
-  method?: InvitationMethod;
-}
-
-// ユーザーID招待データの型
-interface UserInvitationData {
-  receiverId: string;
-  role: InvitationRole;
-  method?: InvitationMethod;
-}
-
-// 送信可能な招待データの型
-type InvitationData = EmailInvitationData | UserInvitationData;
 
 interface InviteModalProps {
   roomId: string;
@@ -76,7 +47,6 @@ interface InviteModalProps {
 }
 
 export function InviteModal({ roomId, open, onClose }: InviteModalProps) {
-  const [activeTab, setActiveTab] = useState<"email" | "user">("email");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // フォームの定義
@@ -88,15 +58,7 @@ export function InviteModal({ roomId, open, onClose }: InviteModalProps) {
     },
   });
 
-  const userForm = useForm<UserInviteValues>({
-    resolver: zodResolver(userInviteSchema),
-    defaultValues: {
-      userId: "",
-      role: "PERFORMER",
-    },
-  });
-
-  // handleEmailInvite関数を修正
+  // handleEmailInvite関数
   const handleEmailInvite = async (values: EmailInviteValues) => {
     try {
       setIsSubmitting(true);
@@ -162,227 +124,110 @@ export function InviteModal({ roomId, open, onClose }: InviteModalProps) {
 
       // エラーメッセージの詳細を表示
       let errorMessage = "招待の送信に失敗しました";
+
       if (error instanceof Error) {
-        errorMessage = error.message;
+        // ngrokエラーの場合は特別なメッセージ
+        if (
+          error.message.includes("ngrok") ||
+          error.message.includes("Service Unavailable")
+        ) {
+          errorMessage =
+            "開発環境のネットワークエラーです。メール機能は現在利用できません。";
+        } else if (error.message.includes("ネットワークエラー")) {
+          errorMessage =
+            "ネットワークエラーが発生しました。接続を確認してください。";
+        } else {
+          errorMessage = error.message;
+        }
       }
 
       toast.error("エラー", {
         description: errorMessage,
+        duration: 5000, // 5秒間表示
       });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleUserInvite = async (values: UserInviteValues) => {
-    const invitationData: UserInvitationData = {
-      receiverId: values.userId,
-      role: values.role,
-      method: "LINK",
-    };
-
-    await sendInvitation(invitationData);
-  };
-
-  const sendInvitation = async (data: InvitationData) => {
-    try {
-      setIsSubmitting(true);
-      const response = await fetch(`/api/rooms/${roomId}/invitations`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "招待の送信に失敗しました");
-      }
-
-      toast("招待送信", {
-        description: "招待を送信しました",
-      });
-
-      // フォームをリセット
-      emailForm.reset();
-      userForm.reset();
-      onClose();
-    } catch (error: unknown) {
-      toast("エラー", {
-        description:
-          error instanceof Error ? error.message : "招待の送信に失敗しました",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  // 以下、コンポーネントのレンダリング部分（変更なし）
+  // 以下、コンポーネントのレンダリング部分
   return (
     <Dialog open={open} onOpenChange={(value) => !value && onClose()}>
-      {/* 既存のダイアログ内容 */}
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>メンバーを招待</DialogTitle>
           <DialogDescription>
-            メールアドレスまたはユーザーIDでルームにメンバーを招待します
+            メールアドレスでルームにメンバーを招待します
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs
-          value={activeTab}
-          onValueChange={(value) => setActiveTab(value as "email" | "user")}
-        >
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="email">メールで招待</TabsTrigger>
-            <TabsTrigger value="user">ユーザーを検索</TabsTrigger>
-          </TabsList>
+        <Form {...emailForm}>
+          <form
+            onSubmit={emailForm.handleSubmit(handleEmailInvite)}
+            className="space-y-4 py-4"
+          >
+            <FormField
+              control={emailForm.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>メールアドレス</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="example@email.com"
+                      {...field}
+                      disabled={isSubmitting}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-          <TabsContent value="email">
-            <Form {...emailForm}>
-              <form
-                onSubmit={emailForm.handleSubmit(handleEmailInvite)}
-                className="space-y-4 py-4"
-              >
-                <FormField
-                  control={emailForm.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>メールアドレス</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="example@email.com"
-                          {...field}
-                          disabled={isSubmitting}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={emailForm.control}
-                  name="role"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>ロール</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                        disabled={isSubmitting}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="ロールを選択" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="PERFORMER">
-                            パフォーマー
-                          </SelectItem>
-                          <SelectItem value="PLANNER">プランナー</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <DialogFooter className="pt-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={onClose}
+            <FormField
+              control={emailForm.control}
+              name="role"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>ロール</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
                     disabled={isSubmitting}
                   >
-                    キャンセル
-                  </Button>
-                  <Button type="submit" disabled={isSubmitting}>
-                    {isSubmitting && (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    )}
-                    招待を送信
-                  </Button>
-                </DialogFooter>
-              </form>
-            </Form>
-          </TabsContent>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="ロールを選択" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="PERFORMER">パフォーマー</SelectItem>
+                      <SelectItem value="PLANNER">プランナー</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-          <TabsContent value="user">
-            <Form {...userForm}>
-              <form
-                onSubmit={userForm.handleSubmit(handleUserInvite)}
-                className="space-y-4 py-4"
+            <DialogFooter className="pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onClose}
+                disabled={isSubmitting}
               >
-                <FormField
-                  control={userForm.control}
-                  name="userId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>ユーザー検索</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="ユーザー名またはメールで検索"
-                          {...field}
-                          disabled={isSubmitting}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={userForm.control}
-                  name="role"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>ロール</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                        disabled={isSubmitting}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="ロールを選択" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="PERFORMER">
-                            パフォーマー
-                          </SelectItem>
-                          <SelectItem value="PLANNER">プランナー</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <DialogFooter className="pt-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={onClose}
-                    disabled={isSubmitting}
-                  >
-                    キャンセル
-                  </Button>
-                  <Button type="submit" disabled={isSubmitting}>
-                    {isSubmitting && (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    )}
-                    招待を送信
-                  </Button>
-                </DialogFooter>
-              </form>
-            </Form>
-          </TabsContent>
-        </Tabs>
+                キャンセル
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                招待を送信
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );

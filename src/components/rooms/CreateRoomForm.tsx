@@ -11,11 +11,10 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { PlanType } from "@prisma/client";
-import { Loader2, Lock, Users } from "lucide-react";
+import { Loader2, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -41,7 +40,7 @@ const formSchema = z.object({
     .string()
     .max(500, "説明は500文字以内で入力してください")
     .optional(),
-  isPrivate: z.boolean(),
+  // isPrivate: z.boolean(),
 });
 
 export function CreateRoomForm() {
@@ -55,7 +54,7 @@ export function CreateRoomForm() {
     defaultValues: {
       name: "",
       description: "",
-      isPrivate: false,
+      // isPrivate: true,
     },
   });
 
@@ -129,7 +128,7 @@ export function CreateRoomForm() {
                 </FormLabel>
                 <FormControl>
                   <Input
-                    placeholder="例: チーム開発ルーム"
+                    placeholder="例: 毎日の英単語"
                     {...field}
                     className="h-12 text-base"
                   />
@@ -150,7 +149,7 @@ export function CreateRoomForm() {
                 <FormLabel className="text-base font-medium">説明</FormLabel>
                 <FormControl>
                   <Textarea
-                    placeholder="例: フロントエンド開発チームで使用するポモドーロルームです。集中して作業しましょう！"
+                    placeholder="例: このルームでは英単語テストを毎日行います"
                     {...field}
                     value={field.value || ""}
                     rows={4}
@@ -165,7 +164,7 @@ export function CreateRoomForm() {
             )}
           />
 
-          <FormField
+          {/* <FormField
             control={form.control}
             name="isPrivate"
             render={({ field }) => (
@@ -216,7 +215,7 @@ export function CreateRoomForm() {
                 </div>
               </FormItem>
             )}
-          />
+          /> */}
 
           <div className="flex justify-end space-x-4 pt-6 border-t border-gray-100">
             <Button

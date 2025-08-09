@@ -10,15 +10,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { canUpgradeSubscription } from "@/lib/subscription-flag";
 import { PLAN_BENEFITS } from "@/lib/subscription-limits";
 import { PlanType } from "@prisma/client";
 
-import { Crown, FolderPlus, Users, Video } from "lucide-react";
+import { Crown, FolderPlus, Upload, Users, Video } from "lucide-react";
 
 interface SubscriptionLimitModalProps {
   isOpen: boolean;
   onClose: () => void;
-  limitType: "ROOM_CREATION" | "RECORDING" | "PARTICIPANT";
+  limitType: "ROOM_CREATION" | "RECORDING" | "PARTICIPANT" | "UPLOAD";
   currentPlan: PlanType;
   currentCount: number;
   maxCount: number;
@@ -26,6 +27,7 @@ interface SubscriptionLimitModalProps {
   userRole?: "PLANNER" | "PERFORMER";
   roomOwnerName?: string;
   recordingLimitType?: "USER" | "ROOM";
+  uploadLimitType?: "USER" | "ROOM";
   customMessage?: string;
 }
 
@@ -45,6 +47,11 @@ const LIMIT_CONFIG = {
     title: "参加者数の上限に達しました",
     description: "このルームの参加者数の上限に達しています。",
   },
+  UPLOAD: {
+    icon: Upload,
+    title: "アップロード制限に達しました",
+    description: "本日のアップロード回数の上限に達しています。",
+  },
 };
 
 export function SubscriptionLimitModal({
@@ -55,18 +62,24 @@ export function SubscriptionLimitModal({
   currentCount,
   maxCount,
   onUpgrade,
-  userRole = "PLANNER",
+  userRole,
   roomOwnerName,
   recordingLimitType,
+  uploadLimitType,
   customMessage,
 }: SubscriptionLimitModalProps) {
   const config = LIMIT_CONFIG[limitType];
   const Icon = config.icon;
 
+  // テストモードではアップグレード機能を無効化
+  const canUpgrade = canUpgradeSubscription();
+
   const isPerformer = userRole === "PERFORMER";
   const isParticipantLimit = limitType === "PARTICIPANT";
   const isRoomRecordingLimit =
     limitType === "RECORDING" && recordingLimitType === "ROOM";
+  const isRoomUploadLimit =
+    limitType === "UPLOAD" && uploadLimitType === "ROOM";
 
   const getRecommendedPlan = () => {
     if (currentPlan === PlanType.FREE) return PlanType.BASIC;
@@ -77,6 +90,9 @@ export function SubscriptionLimitModal({
     if (customMessage) return customMessage;
     if (isRoomRecordingLimit) {
       return "このルームの本日の録画回数制限に達しています。制限はルーム作成者のプランによって決まります。";
+    }
+    if (isRoomUploadLimit) {
+      return "このルームの本日のアップロード回数制限に達しています。制限はルーム作成者のプランによって決まります。";
     }
     return config.description;
   };
@@ -105,7 +121,7 @@ export function SubscriptionLimitModal({
                 {currentCount}/{maxCount}
               </span>
             </div>
-            {roomOwnerName && (
+            {roomOwnerName && (isRoomRecordingLimit || isRoomUploadLimit) && (
               <div className="text-sm text-orange-800 mt-1">
                 ルームオーナー: {roomOwnerName}
               </div>
@@ -133,10 +149,54 @@ export function SubscriptionLimitModal({
               </div>
             </div>
           )}
+
+          {/* 録画制限についてのパフォーマー向け説明 */}
+          {isPerformer && isRoomRecordingLimit && (
+            <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+              <div className="text-sm text-blue-800 font-medium">
+                録画制限について
+              </div>
+              <div className="text-sm text-blue-800 mt-1">
+                録画回数の上限は、ルームを作成したプランナーのサブスクリプションプランによって決まります。
+                この制限を解除するには、ルームオーナー（
+                {roomOwnerName || "プランナー"}
+                ）がプランをアップグレードする必要があります。
+              </div>
+            </div>
+          )}
+
+          {/* アップロード制限についてのルーム説明 */}
+          {isRoomUploadLimit && (
+            <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+              <div className="text-sm text-blue-800 font-medium">
+                アップロード制限について
+              </div>
+              <div className="text-sm text-blue-800 mt-1">
+                {isPerformer
+                  ? `このルームのアップロード制限は、ルームオーナー（${roomOwnerName || "プランナー"}）のプランによって決まります。制限を解除するには、ルームオーナーがプランをアップグレードする必要があります。`
+                  : "このルームのアップロード制限に達しています。プランをアップグレードすることで、より多くのアップロードが可能になります。"}
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* プランナーの場合のみアップグレード情報を表示 */}
-        {!isPerformer && (
+        {/* テストモードの場合は特別メッセージを表示 */}
+        {!canUpgrade && (
+          <div className="py-4">
+            <div className="text-center p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+              <h3 className="font-semibold text-yellow-800 mb-2">
+                🧪 テストモード
+              </h3>
+              <p className="text-yellow-700 text-sm">
+                現在、テストモードで動作しています。
+                今後、サブスクリプションによるプランのアップグレードが可能になります。
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* プランナーの場合のみアップグレード情報を表示（テストモードでない場合） */}
+        {!isPerformer && !(isRoomUploadLimit && isPerformer) && canUpgrade && (
           <div className="py-4">
             <div className="border rounded-lg p-4 bg-gradient-to-r from-blue-50 to-indigo-50">
               <div className="flex items-center gap-2 mb-2">
@@ -166,17 +226,21 @@ export function SubscriptionLimitModal({
             onClick={onClose}
             className="sm:w-auto w-full"
           >
-            {isPerformer ? "閉じる" : "後で決める"}
+            {isPerformer || (isRoomUploadLimit && isPerformer) || !canUpgrade
+              ? "閉じる"
+              : "後で決める"}
           </Button>
-          {/* プランナーの場合のみアップグレードボタンを表示 */}
-          {!isPerformer && (
-            <Button
-              onClick={onUpgrade}
-              className="sm:w-auto w-full bg-blue-600 hover:bg-blue-700"
-            >
-              今すぐアップグレード
-            </Button>
-          )}
+          {/* プランナーの場合のみアップグレードボタンを表示（テストモードでない場合） */}
+          {!isPerformer &&
+            !(isRoomUploadLimit && isPerformer) &&
+            canUpgrade && (
+              <Button
+                onClick={onUpgrade}
+                className="sm:w-auto w-full bg-blue-600 hover:bg-blue-700"
+              >
+                今すぐアップグレード
+              </Button>
+            )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

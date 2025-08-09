@@ -1,6 +1,5 @@
 "use client";
 
-// import logoIcon from "@/assets/pomolink_icon.svg";
 import { cn } from "@/lib/utils";
 import { SignOutButton, useAuth, UserButton } from "@clerk/nextjs";
 import {
@@ -63,28 +62,18 @@ export default function ProtectedLayout({
       icon: Receipt,
       active: pathname?.startsWith("/pricing"),
     },
-
-    // {
-    //   href: "/media-test/webCodecs",
-    //   label: "WebCodecs",
-    //   icon: Clock,
-    //   active: pathname?.startsWith("/media-test/webCodecs"),
-    // },
-    // {
-    //   href: "/media-test",
-    //   label: "Media Test",
-    //   icon: Clock,
-    //   active:
-    //     pathname?.startsWith("/media-test") &&
-    //     !pathname?.startsWith("/media-test/webCodecs") &&
-    //     !pathname?.startsWith("/media-test/ImageAnalyzer"),
-    // },
-    // {
-    //   href: "/media-test/ImageAnalyzer",
-    //   label: "Image Analyzer",
-    //   icon: Clock,
-    //   active: pathname?.startsWith("/media-test/ImageAnalyzer"),
-    // },
+    {
+      href: "/profile",
+      label: "プロフィール",
+      icon: User,
+      active: pathname?.startsWith("/profile"),
+    },
+    {
+      href: "/settings",
+      label: "設定",
+      icon: Settings,
+      active: pathname?.startsWith("/settings"),
+    },
   ];
 
   if (!isLoaded || !isSignedIn || !userId) {
@@ -113,7 +102,6 @@ export default function ProtectedLayout({
 
   return (
     <div className="h-full bg-gray-50/50">
-      {/* モバイルサイドバートグル */}
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
@@ -126,12 +114,10 @@ export default function ProtectedLayout({
         )}
       </button>
 
-      {/* サイドバー - デスクトップ */}
       <div className="hidden lg:flex h-full w-72 flex-col fixed inset-y-0 z-50">
         <div className="h-full border-r bg-white shadow-sm flex flex-col">
-          {/* ロゴエリア */}
           <Link
-            href="/"
+            href="/dashboard"
             className="p-6 flex items-center justify-center relative min-h-20 cursor-pointer group hover:scale-110  transition-transform"
           >
             <Image
@@ -150,7 +136,6 @@ export default function ProtectedLayout({
             />
           </Link>
 
-          {/* ナビゲーション */}
           <div className="flex-1 flex flex-col justify-between py-4">
             <nav className="flex-1 px-4 space-y-2">
               {routes.map((route) => (
@@ -174,27 +159,8 @@ export default function ProtectedLayout({
                 </Link>
               ))}
             </nav>
-
-            {/* プロフィールセクション */}
-            <div className="px-4 space-y-2 border-t pt-4">
-              <Link
-                href="/profile"
-                className="flex items-center gap-3 rounded-xl py-3 px-4 text-sm font-medium hover:bg-gray-100 text-gray-700 hover:text-gray-900 hover-lift transition-all"
-              >
-                <User className="h-5 w-5 text-gray-500" />
-                プロフィール
-              </Link>
-              <Link
-                href="/settings"
-                className="flex items-center gap-3 rounded-xl py-3 px-4 text-sm font-medium hover:bg-gray-100 text-gray-700 hover:text-gray-900 hover-lift transition-all"
-              >
-                <Settings className="h-5 w-5 text-gray-500" />
-                設定
-              </Link>
-            </div>
           </div>
 
-          {/* ユーザー情報 */}
           <div className="border-t p-4">
             <div className="flex items-center justify-between">
               <UserButton
@@ -215,7 +181,6 @@ export default function ProtectedLayout({
         </div>
       </div>
 
-      {/* サイドバー - モバイル */}
       <div
         className={cn(
           "lg:hidden fixed inset-0 z-30 bg-black/20 backdrop-blur-sm transition-opacity",
@@ -229,10 +194,8 @@ export default function ProtectedLayout({
           )}
         >
           <div className="h-full flex flex-col">
-            {/* ロゴエリア */}
             <div className="p-6  bg-gradient-to-r from-indigo-500 to-purple-500">
               <Image
-                // src={logoIcon}
                 src="/icon_trimmed.png"
                 alt="PomoLink"
                 width={40}
@@ -248,7 +211,6 @@ export default function ProtectedLayout({
               />
             </div>
 
-            {/* ナビゲーション */}
             <div className="flex-1 flex flex-col justify-between py-4">
               <nav className="flex-1 px-4 space-y-2">
                 {routes.map((route) => (
@@ -273,29 +235,8 @@ export default function ProtectedLayout({
                   </Link>
                 ))}
               </nav>
-
-              {/* プロフィールセクション */}
-              <div className="px-4 space-y-2 border-t pt-4">
-                <Link
-                  href="/profile"
-                  onClick={() => setIsOpen(false)}
-                  className="flex items-center gap-3 rounded-xl py-3 px-4 text-sm font-medium hover:bg-gray-100 text-gray-700 hover:text-gray-900 transition-all"
-                >
-                  <User className="h-5 w-5 text-gray-500" />
-                  プロフィール
-                </Link>
-                <Link
-                  href="/settings"
-                  onClick={() => setIsOpen(false)}
-                  className="flex items-center gap-3 rounded-xl py-3 px-4 text-sm font-medium hover:bg-gray-100 text-gray-700 hover:text-gray-900 transition-all"
-                >
-                  <Settings className="h-5 w-5 text-gray-500" />
-                  設定
-                </Link>
-              </div>
             </div>
 
-            {/* ユーザー情報 */}
             <div className="border-t p-4">
               <div className="flex items-center justify-between">
                 <UserButton afterSignOutUrl="/" />
@@ -315,7 +256,6 @@ export default function ProtectedLayout({
         </div>
       </div>
 
-      {/* メインコンテンツ */}
       <main className="lg:pl-72 min-h-screen">
         <div className="h-full p-4 md:p-6 lg:p-8">{children}</div>
       </main>

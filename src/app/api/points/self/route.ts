@@ -9,7 +9,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // ClerkIdからDBのUserIdを取得
   const user = await prisma.user.findUnique({
     where: { clerkId },
     select: { id: true },
@@ -19,7 +18,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
 
-  // オプション：roomId クエリでフィルタ
   const url = new URL(req.url);
   const roomId = url.searchParams.get("roomId");
   const where: Prisma.PointHistoryWhereInput = { userId: user.id };

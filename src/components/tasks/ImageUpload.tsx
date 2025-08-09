@@ -1,17 +1,32 @@
+import { SubscriptionLimitModal } from "@/components/subscription/SubscriptionLimitModal";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import type { UploadType } from "@/types";
-import { FileImage, Upload, X } from "lucide-react";
+import { PlanType } from "@prisma/client";
+import { FileImage, Info, Upload, X } from "lucide-react";
 import Image from "next/image";
-import { ChangeEvent, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { ChangeEvent, useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+
+interface UploadStats {
+  canUpload: boolean;
+  currentCount: number;
+  maxCount: number;
+  remainingCount: number;
+  planType: string;
+  limitType: "USER" | "ROOM";
+}
 
 export interface ImageUploadProps {
   taskId: string;
   onUploadSuccess: (uploads: UploadType[]) => void;
   uploadLoading: boolean;
   setUploadLoading: (loading: boolean) => void;
+  // アップロード制限モーダル用の追加プロパティ
+  userRole?: "PLANNER" | "PERFORMER";
+  roomOwnerName?: string;
 }
 
 export const ImageUpload = ({
@@ -19,11 +34,33 @@ export const ImageUpload = ({
   onUploadSuccess,
   uploadLoading,
   setUploadLoading,
+  userRole = "PLANNER",
+  roomOwnerName,
 }: ImageUploadProps) => {
   const [uploadDesc, setUploadDesc] = useState<string>("");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<{ name: string; url: string }[]>([]);
+  const [uploadStats, setUploadStats] = useState<UploadStats | null>(null);
+  const [showLimitModal, setShowLimitModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const router = useRouter();
+
+  // アップロード統計を取得
+  const fetchUploadStats = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/tasks/${taskId}/upload-stats`);
+      if (res.ok) {
+        const stats = await res.json();
+        setUploadStats(stats);
+      }
+    } catch (error) {
+      console.error("アップロード統計の取得に失敗:", error);
+    }
+  }, [taskId]);
+
+  useEffect(() => {
+    fetchUploadStats();
+  }, [fetchUploadStats]);
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -56,6 +93,20 @@ export const ImageUpload = ({
   const handleImageUpload = async () => {
     if (selectedFiles.length === 0) return;
 
+    // 制限チェック
+    if (uploadStats && !uploadStats.canUpload) {
+      // モーダルを表示
+      setShowLimitModal(true);
+      return;
+    }
+
+    if (uploadStats && selectedFiles.length > uploadStats.remainingCount) {
+      toast.error("アップロード制限", {
+        description: `選択されたファイル数が残り制限数（${uploadStats.remainingCount}件）を超えています。`,
+      });
+      return;
+    }
+
     setUploadLoading(true);
     try {
       const formData = new FormData();
@@ -74,19 +125,58 @@ export const ImageUpload = ({
         setPreviews([]);
         setUploadDesc("");
         if (fileInputRef.current) fileInputRef.current.value = "";
+
+        // アップロード統計を更新
+        fetchUploadStats();
+
+        toast.success("アップロード完了", {
+          description: `${selectedFiles.length}件の画像をアップロードしました。`,
+        });
       } else {
-        toast("エラー", { description: "提出物のアップロードに失敗しました" });
+        const errorData = await res.json();
+        if (res.status === 429) {
+          // 429エラーの場合はモーダルを表示
+          setShowLimitModal(true);
+        } else {
+          toast.error("エラー", {
+            description:
+              errorData.error || "提出物のアップロードに失敗しました",
+          });
+        }
       }
     } catch (e) {
       console.error("提出物アップロードエラー:", e);
-      toast("エラー", { description: "提出物のアップロードに失敗しました" });
+      toast.error("エラー", {
+        description: "提出物のアップロードに失敗しました",
+      });
     } finally {
       setUploadLoading(false);
     }
   };
 
+  const handleUpgradeClick = () => {
+    router.push("/pricing");
+  };
+
+  const handleModalOpen = () => {
+    setShowLimitModal(true);
+  };
+
   return (
     <div className="space-y-4">
+      <SubscriptionLimitModal
+        isOpen={showLimitModal}
+        onClose={() => setShowLimitModal(false)}
+        limitType="UPLOAD"
+        currentPlan={(uploadStats?.planType as PlanType) || PlanType.FREE}
+        currentCount={uploadStats?.currentCount || 0}
+        maxCount={uploadStats?.maxCount || 0}
+        onUpgrade={handleUpgradeClick}
+        userRole={userRole}
+        roomOwnerName={roomOwnerName}
+        uploadLimitType={uploadStats?.limitType}
+      />
+
       <div className="flex items-center justify-between">
         <h4 className="text-base font-semibold flex items-center gap-2">
           <FileImage className="w-4 h-4" />
@@ -95,6 +185,20 @@ export const ImageUpload = ({
             (画像ファイルのみ・複数選択可)
           </span>
         </h4>
+
+        {uploadStats && (
+          <div className="text-xs text-muted-foreground">
+            本日: {uploadStats.currentCount}/{uploadStats.maxCount}件
+            {uploadStats.remainingCount > 0 && (
+              <span className="text-green-600 ml-1">
+                (残り{uploadStats.remainingCount}件)
+              </span>
+            )}
+            {uploadStats.remainingCount === 0 && (
+              <span className="text-red-600 ml-1">(上限達成)</span>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -143,6 +247,26 @@ export const ImageUpload = ({
           <p className="text-xs text-muted-foreground">
             ※ 説明は全画像に共通で付きます
           </p>
+          {uploadStats && !uploadStats.canUpload && (
+            <p className="text-xs text-red-600 flex items-center gap-1">
+              <span>
+                本日の{uploadStats.limitType === "USER" ? "ユーザー" : "ルーム"}
+                アップロード上限に達しています
+              </span>
+              <Info
+                size={16}
+                onClick={handleModalOpen}
+                className="cursor-pointer"
+              />
+            </p>
+          )}
+          {uploadStats &&
+            uploadStats.canUpload &&
+            selectedFiles.length > uploadStats.remainingCount && (
+              <p className="text-xs text-orange-600">
+                選択可能な残り件数: {uploadStats.remainingCount}件
+              </p>
+            )}
         </div>
       </div>
 

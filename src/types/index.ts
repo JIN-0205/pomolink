@@ -1,11 +1,3 @@
-// src/types/index.ts
-
-/**
- * Prismaの型を基にしたフロントエンド用型定義
- * API応答で使用される型（Date→string変換済み）
- */
-
-// 基本モデル型
 export type User = {
   id: string;
   clerkId: string;
@@ -58,8 +50,8 @@ export type Task = {
   priority: "LOW" | "MEDIUM" | "HIGH";
   estimatedPomos?: number | null;
   completedPomos: number;
-  workDuration?: number | null; // ポモドーロ作業時間（分）
-  breakDuration?: number | null; // ポモドーロ休憩時間（分）
+  workDuration?: number | null;
+  breakDuration?: number | null;
   dueDate: string | null;
   roomId: string;
   createdAt: string;
@@ -78,24 +70,14 @@ export type Session = {
   notes?: string | null;
   createdAt: string;
   updatedAt: string;
-  dailyReportId?: string | null;
 };
 
-// 型名のUploadをUploadTypeにリネーム
 export type UploadType = {
   id: string;
   sessionId?: string | null;
   userId: string;
   fileUrl: string;
   description?: string | null;
-  createdAt: string;
-  dailyReportId?: string | null;
-};
-
-export type DailyReport = {
-  id: string;
-  userId: string;
-  date: string;
   createdAt: string;
 };
 
@@ -129,7 +111,6 @@ export type Subscription = {
   updatedAt: string;
 };
 
-// API応答の拡張型
 export type RoomWithParticipantCount = Room & {
   participantCount: number;
   userRole: "PLANNER" | "PERFORMER";
@@ -152,9 +133,6 @@ export type InvitationWithDetails = Invitation & {
   receiver?: User;
 };
 
-// API応答型
-
-// リレーション付きの型
 export type TaskProposalWithProposer = TaskProposal & {
   proposer: User;
 };
@@ -176,38 +154,30 @@ export type ValidateCodeResponse = {
 
 export interface ExtractedDocAIData {
   fullText: string;
-  // pages?: protos.google.cloud.documentai.v1.Document.IPage[]; // 必要なら追加
-  // entities?: protos.google.cloud.documentai.v1.IEntity[];   // 必要なら追加
 }
 
-// クイズアイテムの型 (例)
 export interface QuizItem {
   question: string;
   options: string[];
   answer: string;
 }
 
-// Gemini 処理後の統合データ型 (APIの成功レスポンス)
 export interface GeminiProcessedData extends ExtractedDocAIData {
   summary: string;
   quiz?: QuizItem[];
   quizError?: string;
   geminiError?: string;
 }
-
-// APIのエラーレスポンスの型
 export interface ErrorResponse {
   message: string;
 }
 
-// 公開統計データの型定義
 export type PublicStats = {
   totalCompletedPomodoros: number;
   totalRooms: number;
   totalUsers: number;
 };
 
-// ダッシュボード統計の型定義（既存）
 export type DashboardStats = {
   totalPomodoros: number;
   completedTasks: number;

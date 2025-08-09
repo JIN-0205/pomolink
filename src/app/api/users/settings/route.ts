@@ -14,6 +14,7 @@ export async function GET() {
       select: {
         workAlarmSound: true,
         breakAlarmSound: true,
+        soundVolume: true,
       },
     });
 
@@ -38,17 +39,22 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { workAlarmSound, breakAlarmSound } = await request.json();
+    const { workAlarmSound, breakAlarmSound, soundVolume } =
+      await request.json();
 
     const user = await prisma.user.update({
       where: { clerkId: userId },
       data: {
         ...(workAlarmSound && { workAlarmSound }),
         ...(breakAlarmSound && { breakAlarmSound }),
+        ...(soundVolume !== undefined && {
+          soundVolume: parseFloat(soundVolume),
+        }),
       },
       select: {
         workAlarmSound: true,
         breakAlarmSound: true,
+        soundVolume: true,
       },
     });
 

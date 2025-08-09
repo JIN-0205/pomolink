@@ -57,7 +57,6 @@ import { canRecord } from "@/lib/subscription-service";
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 
-// ポモドーロセッション作成API
 export async function POST(req: NextRequest) {
   try {
     const { userId: clerkId } = await auth();
@@ -71,12 +70,11 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { taskId } = body;
+    const { taskId, withRecording = true } = body;
     if (!taskId) {
       return new NextResponse("taskIdが必要です", { status: 400 });
     }
 
-    // タスクとルーム参加権限チェック
     const task = await prisma.task.findUnique({
       where: { id: taskId },
       include: { room: { include: { participants: true } } },
@@ -95,22 +93,23 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // 録画制限チェック
-    const recordingCheck = await canRecord(task.room.id, user.id);
-    if (!recordingCheck.canRecord) {
-      return NextResponse.json(
-        {
-          error: "録画制限に達しました",
-          code: "RECORDING_LIMIT_EXCEEDED",
-          currentCount: recordingCheck.currentCount,
-          maxCount: recordingCheck.maxCount,
-          planType: recordingCheck.planType,
-        },
-        { status: 403 }
-      );
+    if (withRecording) {
+      const recordingCheck = await canRecord(task.room.id, user.id);
+      if (!recordingCheck.canRecord) {
+        return NextResponse.json(
+          {
+            error: "録画制限に達しました",
+            code: "RECORDING_LIMIT_EXCEEDED",
+            currentCount: recordingCheck.currentCount,
+            maxCount: recordingCheck.maxCount,
+            planType: recordingCheck.planType,
+            roomOwnerName: recordingCheck.roomOwnerName,
+          },
+          { status: 403 }
+        );
+      }
     }
 
-    // Session作成
     const session = await prisma.session.create({
       data: {
         userId: user.id,

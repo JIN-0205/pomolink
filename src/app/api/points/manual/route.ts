@@ -13,7 +13,6 @@ export async function POST(req: NextRequest) {
   if (!userId || !roomId || typeof points !== "number") {
     return new NextResponse("パラメータ不正", { status: 400 });
   }
-  // プランナー権限チェック
   const participant = await prisma.roomParticipant.findUnique({
     where: { userId_roomId: { userId: planner.id, roomId } },
   });

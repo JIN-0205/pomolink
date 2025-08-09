@@ -44,14 +44,13 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import * as z from "zod";
 
-// バリデーションスキーマ
 const formSchema = z.object({
   title: z.string().min(1, "タイトルは必須です"),
   description: z.string().optional(),
   priority: z.enum(["LOW", "MEDIUM", "HIGH"]),
   estimatedPomos: z.coerce.number().min(1).optional().nullable(),
   dueDate: z.date().optional().nullable(),
-  workDuration: z.coerce.number().min(5).max(90).optional(),
+  workDuration: z.coerce.number().min(1).max(60).optional(),
   breakDuration: z.coerce.number().min(1).max(30).optional(),
 });
 
@@ -62,7 +61,6 @@ export default function CreateTaskPage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // フォーム設定
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -76,7 +74,6 @@ export default function CreateTaskPage() {
     },
   });
 
-  // タスク作成処理
   const onSubmit = async (values: FormValues) => {
     try {
       setIsSubmitting(true);
@@ -101,7 +98,6 @@ export default function CreateTaskPage() {
         description: "新しいタスクを作成しました",
       });
 
-      // タスク一覧または作成したタスクの詳細ページに遷移
       router.push(`/rooms/${roomId}`);
     } catch (error) {
       console.error("タスク作成エラー:", error);
@@ -276,8 +272,8 @@ export default function CreateTaskPage() {
                       <FormControl>
                         <Input
                           type="number"
-                          min={5}
-                          max={90}
+                          min={1}
+                          max={60}
                           placeholder="25"
                           {...field}
                           value={field.value || ""}
@@ -290,7 +286,7 @@ export default function CreateTaskPage() {
                         />
                       </FormControl>
                       <FormDescription>
-                        5分〜90分の範囲で設定してください（推奨：25分）
+                        1分〜60分の範囲で設定してください（推奨：25分）
                       </FormDescription>
                       <FormMessage />
                     </FormItem>

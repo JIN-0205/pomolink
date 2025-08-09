@@ -12,7 +12,6 @@ export async function POST(req: NextRequest) {
       return new NextResponse("認証が必要です", { status: 401 });
     }
 
-    // リクエストボディから招待コードを取得
     const body = await req.json();
     const { code: inviteCode } = body;
 
@@ -20,20 +19,14 @@ export async function POST(req: NextRequest) {
       return new NextResponse("招待コードが必要です", { status: 400 });
     }
 
-    // デバッグ情報をログ出力
     console.log("Join Request:", { clerkUserId: userId, inviteCode });
 
-    // ユーザーをデータベースから取得
     const user = await prisma.user.findUnique({
       where: { clerkId: userId },
     });
 
-    // ユーザーが見つからない場合は明示的なエラーメッセージを返す
     if (!user) {
       console.log("User not found for clerkId:", userId);
-
-      // アカウントは作成されているがデータベースのユーザーが未作成の場合は作成する
-      // これはClerkで認証したものの、データベースに同期されていない場合に発生する
       const clerk = await fetch(`https://api.clerk.dev/v1/users/${userId}`, {
         headers: {
           Authorization: `Bearer ${process.env.CLERK_SECRET_KEY}`,
@@ -43,7 +36,6 @@ export async function POST(req: NextRequest) {
 
       if (clerk.ok) {
         const clerkUser = await clerk.json();
-        // Clerkからユーザー情報が取得できた場合は新規ユーザーとして作成
         try {
           const newUser = await prisma.user.create({
             data: {
@@ -58,7 +50,6 @@ export async function POST(req: NextRequest) {
 
           console.log("Created new user:", newUser.id);
 
-          // 新規作成したユーザーでリクエストを続行
           const room = await handleJoinRoom(newUser, inviteCode);
           return room;
         } catch (createError) {
@@ -68,7 +59,6 @@ export async function POST(req: NextRequest) {
           });
         }
       } else {
-        // Clerkからも情報が取得できない場合
         return new NextResponse(
           "ユーザーが見つかりません。アカウント設定を確認してください",
           { status: 404 }
@@ -76,7 +66,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 既存ユーザーの場合はルーム参加処理を実行
     return await handleJoinRoom(user, inviteCode);
   } catch (error) {
     console.error("[JOIN_ROOM]", error);
@@ -84,12 +73,10 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// ルーム参加処理を行う関数（コードの重複を避けるため分離）
 async function handleJoinRoom(
   user: { id: string; clerkId: string },
   inviteCode: string
 ) {
-  // 招待コードでルームを検索
   const room = await prisma.room.findUnique({
     where: { inviteCode },
     include: {
@@ -101,7 +88,6 @@ async function handleJoinRoom(
     return new NextResponse("無効な招待コードです", { status: 404 });
   }
 
-  // すでに参加しているか確認
   const existingParticipant = room.participants.find(
     (p) => p.userId === user.id
   );
@@ -112,7 +98,6 @@ async function handleJoinRoom(
     });
   }
 
-  // 参加者制限をチェック（メインプランナーのプランに基づく）
   const mainPlannerId = room.mainPlannerId || room.creatorId;
   const participantCheck = await canAddParticipant(room.id, mainPlannerId);
 
@@ -130,19 +115,16 @@ async function handleJoinRoom(
     );
   }
 
-  // ロール決定ロジック：パフォーマーが既に存在する場合はプランナーとして参加
   const existingPerformer = room.participants.find(
     (p) => p.role === "PERFORMER"
   );
   const role = existingPerformer ? "PLANNER" : "PERFORMER";
 
-  // 一人目のプランナーで、かつメインプランナーが未設定の場合のみメインプランナーに設定
   let shouldSetAsMainPlanner = false;
   if (role === "PLANNER") {
     const existingPlanners = room.participants.filter(
       (p) => p.role === "PLANNER"
     );
-    // プランナーが他にいない、かつメインプランナーが未設定の場合のみ
     shouldSetAsMainPlanner =
       existingPlanners.length === 0 && !room.mainPlannerId;
 
@@ -155,7 +137,6 @@ async function handleJoinRoom(
     });
   }
 
-  // 参加者として追加
   await prisma.roomParticipant.create({
     data: {
       userId: user.id,
@@ -164,7 +145,6 @@ async function handleJoinRoom(
     },
   });
 
-  // 一人目のプランナーの場合、ルームのメインプランナーとして設定
   if (shouldSetAsMainPlanner) {
     console.log("Setting user as main planner:", {
       userId: user.id,
@@ -179,7 +159,6 @@ async function handleJoinRoom(
     console.log("Main planner set successfully");
   }
 
-  // Firestoreにも同期
   try {
     const firestore = getFirestore(adminApp);
     await firestore
@@ -194,13 +173,11 @@ async function handleJoinRoom(
       });
   } catch (firestoreError) {
     console.error("[FIRESTORE_SYNC]", firestoreError);
-    // Firestoreへの同期失敗はAPIエラーにはしない（必要ならロギングのみ）
   }
 
-  // 成功レスポンス
   return NextResponse.json({
     alreadyJoined: false,
     roomId: room.id,
-    role: role, // 参加したロールを含める
+    role: role,
   });
 }

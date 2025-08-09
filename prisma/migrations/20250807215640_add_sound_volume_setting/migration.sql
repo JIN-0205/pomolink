@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "User" ADD COLUMN     "soundVolume" DOUBLE PRECISION NOT NULL DEFAULT 0.5;

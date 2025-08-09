@@ -35,10 +35,8 @@ import { useVideoUpload } from "@/hooks/useVideoUpload";
 import { AlarmPreset } from "@/lib/audio";
 import { PlanType } from "@prisma/client";
 
-// タイマーの種類
 type TimerType = "work" | "break";
 
-// タイマーの状態
 type TimerState = "idle" | "running" | "paused" | "completed";
 
 export default function PomodoroPage() {
@@ -46,7 +44,6 @@ export default function PomodoroPage() {
   const searchParams = useSearchParams();
   const taskId = searchParams.get("taskId");
 
-  // ステート
   const [task, setTask] = useState<Task | null>(null);
   const [isLoading, setIsLoading] = useState(!!taskId);
   const [timerType, setTimerType] = useState<TimerType>("work");
@@ -54,29 +51,23 @@ export default function PomodoroPage() {
   const [userSettings, setUserSettings] = useState({
     workAlarmSound: "buzzer" as AlarmPreset,
     breakAlarmSound: "kalimba" as AlarmPreset,
+    soundVolume: 0.5,
   });
 
-  // ポモドーロテクニックの標準時間に固定
-  const workDuration = task?.workDuration || 25; // タスクの設定値を使用、デフォルトは25分
-  const breakDuration = task?.breakDuration || 5; // タスクの設定値を使用、デフォルトは5分
+  const workDuration = task?.workDuration || 25;
+  const breakDuration = task?.breakDuration || 5;
 
-  const [timeLeft, setTimeLeft] = useState(workDuration * 60); // 初期値を作業時間に設定
+  const [timeLeft, setTimeLeft] = useState(workDuration * 60);
   const [totalTime, setTotalTime] = useState(workDuration * 60);
   const [timerEndTime, setTimerEndTime] = useState<number | null>(null);
   const [sessionId, setSessionId] = useState<string | undefined>(undefined);
 
-  // カメラのオンオフ状態を追加
   const [isCameraEnabled, setIsCameraEnabled] = useState(true);
 
-  // --- 録画・エンコード・アップロード用フック ---
-  const {
-    videoRef,
-    error: cameraError,
-    // isReady,
-  } = useCamera({
+  const { videoRef, error: cameraError } = useCamera({
     width: 640,
     height: 360,
-    enabled: isCameraEnabled, // カメラの有効/無効を制御
+    enabled: isCameraEnabled,
   });
   const {
     frames,
@@ -89,7 +80,7 @@ export default function PomodoroPage() {
   } = useFrameCapture({
     captureWidth: 640,
     captureHeight: 360,
-    interval: 1000,
+    interval: 833,
   });
   const { encodingStatus, encodeFrames, resetStatus } = useVideoEncoder();
   const { uploadStatus, uploadVideo, resetUploadStatus } = useVideoUpload();
@@ -97,7 +88,6 @@ export default function PomodoroPage() {
   const [showVideoConfirm, setShowVideoConfirm] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
-  // 録画制限モーダル用のstate
   const [showLimitModal, setShowLimitModal] = useState(false);
   const [limitError, setLimitError] = useState<{
     currentCount: number;
@@ -107,7 +97,6 @@ export default function PomodoroPage() {
     roomOwnerName?: string;
   } | null>(null);
 
-  // ユーザー設定を取得
   useEffect(() => {
     const fetchUserSettings = async () => {
       try {
@@ -123,7 +112,6 @@ export default function PomodoroPage() {
     fetchUserSettings();
   }, []);
 
-  // タスク情報を取得
   useEffect(() => {
     const fetchTaskDetails = async () => {
       if (!taskId) {
@@ -141,7 +129,7 @@ export default function PomodoroPage() {
           throw new Error("タスクの取得に失敗しました");
         }
         const data = await res.json();
-        setTask(data.task || data); // APIが{task, sessions}返す場合も考慮
+        setTask(data.task || data);
       } catch (error) {
         console.error(error);
         toast("エラー", {
@@ -155,7 +143,6 @@ export default function PomodoroPage() {
     fetchTaskDetails();
   }, [taskId]);
 
-  // タイマー設定を変更したときに時間を更新（idleの時のみ）
   useEffect(() => {
     if (timerState === "idle") {
       if (timerType === "work") {
@@ -168,94 +155,167 @@ export default function PomodoroPage() {
         setTimerEndTime(null);
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workDuration, breakDuration, timerType]); // timerStateは意図的に除外（一時停止・再開でリセットを防ぐため）
+  }, [workDuration, breakDuration, timerType, timerState]);
 
-  // タイマーの開始
   const startTimer = async () => {
     if (timerState === "running") return;
 
-    console.log("startTimer 呼び出し");
-
-    // 新規開始の場合のみセッション作成と録画開始を行う
     if (timerState === "idle" && timerType === "work") {
       if (taskId) {
         try {
           const res = await fetch(`/api/pomodoro/sessions`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ taskId }),
+            body: JSON.stringify({
+              taskId,
+              withRecording: isCameraEnabled,
+            }),
           });
           if (!res.ok) {
             const errText = await res.text();
             console.error("Session create API error:", res.status, errText);
-            throw new Error("セッション作成失敗");
+
+            if (res.status === 403 && isCameraEnabled) {
+              try {
+                const errorData = JSON.parse(errText);
+                if (errorData.code === "RECORDING_LIMIT_EXCEEDED") {
+                  setLimitError({
+                    currentCount: errorData.currentCount,
+                    maxCount: errorData.maxCount,
+                    planType: errorData.planType,
+                    error: errorData.error,
+                    roomOwnerName: errorData.roomOwnerName,
+                  });
+                  setShowLimitModal(true);
+                  return;
+                }
+              } catch (parseError) {
+                console.error(
+                  "Error parsing session creation error:",
+                  parseError
+                );
+              }
+            }
+
+            if (res.status === 403 && !isCameraEnabled) {
+              try {
+                const errorData = JSON.parse(errText);
+                if (errorData.code === "RECORDING_LIMIT_EXCEEDED") {
+                  console.log(
+                    "カメラオフでの録画制限エラー - 録画なしで再試行"
+                  );
+                  toast("録画なしでセッションを開始します", {
+                    description: "カメラがオフのため録画は行われません。",
+                  });
+
+                  const retryRes = await fetch(`/api/pomodoro/sessions`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      taskId,
+                      withRecording: false,
+                    }),
+                  });
+
+                  if (retryRes.ok) {
+                    const retryData = await retryRes.json();
+                    setSessionId(retryData.id);
+                    updateTaskStatus("IN_PROGRESS");
+                  } else {
+                    throw new Error("録画なしセッション作成失敗");
+                  }
+                } else {
+                  throw new Error("セッション作成失敗");
+                }
+              } catch (parseError) {
+                console.error("Error parsing error response:", parseError);
+                throw new Error("セッション作成失敗");
+              }
+            } else {
+              throw new Error("セッション作成失敗");
+            }
+          } else {
+            const data = await res.json();
+            setSessionId(data.id);
+            updateTaskStatus("IN_PROGRESS");
           }
-          const data = await res.json();
-          setSessionId(data.id);
-          updateTaskStatus("IN_PROGRESS");
         } catch (error) {
           console.error(error);
-          toast("エラー", { description: "セッションの開始に失敗しました" });
-          return;
+
+          if (!isCameraEnabled && !sessionId) {
+            try {
+              const retryRes = await fetch(`/api/pomodoro/sessions`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  taskId,
+                  withRecording: false,
+                }),
+              });
+
+              if (retryRes.ok) {
+                const retryData = await retryRes.json();
+                setSessionId(retryData.id);
+                updateTaskStatus("IN_PROGRESS");
+                toast("録画なしでセッションを開始しました", {
+                  description: "カメラがオフのため録画は行われません。",
+                });
+              } else {
+                toast("録画なしでタイマーを開始します", {
+                  description:
+                    "セッション記録はありませんが、タイマーは利用できます。",
+                });
+              }
+            } catch (retryError) {
+              console.error("Retry session creation failed:", retryError);
+              toast("録画なしでタイマーを開始します", {
+                description:
+                  "セッション記録はありませんが、タイマーは利用できます。",
+              });
+            }
+          } else if (isCameraEnabled) {
+            toast("エラー", { description: "セッションの開始に失敗しました" });
+            return;
+          }
         }
       }
 
-      // カメラが有効な場合のみ録画を開始（新規開始時のみ）
       if (isCameraEnabled) {
-        console.log("録画開始準備");
-        clearFrames(); // 前回のフレームをクリア
+        clearFrames();
         setEncodedBlob(null);
         setPreviewUrl(null);
         resetStatus();
         resetUploadStatus();
 
-        // タイマー状態を変更する前に録画を開始
         startRecording();
-        console.log("startRecording 呼び出し完了");
-      } else {
-        console.log("カメラがオフのため録画をスキップ");
       }
     }
 
-    // タイマー状態を変更（録画開始の後に行う）
-    console.log("タイマー状態を running に設定");
-
-    // 終了予定時刻をセット
-    // 一時停止からの再開の場合は、現在の timeLeft を使用
-    // 新規開始の場合は、フル時間を使用
-    const durationMs = timeLeft * 1000; // 現在の残り時間をミリ秒に変換
+    const durationMs = timeLeft * 1000;
     setTimerEndTime(Date.now() + durationMs);
     setTimerState("running");
   };
 
-  // タイマーの一時停止
   const pauseTimer = () => {
     if (timerState !== "running") return;
     setTimerState("paused");
-    setTimerEndTime(null); // 一時停止時は終了予定時刻をクリア
+    setTimerEndTime(null);
   };
 
-  // タイマーのスキップ
   const skipTimer = () => {
     if (timerState !== "running" && timerState !== "paused") return;
-    setTimerEndTime(null); // スキップ時はクリア
+    setTimerEndTime(null);
     handleTimerSkipped();
   };
 
-  // タイマーのスキップ処理（完了とは別の処理）
   const handleTimerSkipped = useCallback(async () => {
     setTimerEndTime(null);
 
     if (timerType === "work") {
-      // 作業タイマーのスキップ処理
-
-      // カメラが有効な場合は録画を停止して破棄
       if (isCameraEnabled) {
         stopRecording();
-        clearFrames(); // フレームを破棄
+        clearFrames();
 
-        // エンコード済みデータがあれば破棄
         if (encodedBlob) {
           setEncodedBlob(null);
         }
@@ -266,7 +326,6 @@ export default function PomodoroPage() {
         resetStatus();
       }
 
-      // セッションがある場合は破棄として記録
       if (sessionId) {
         try {
           await fetch(`/api/pomodoro/sessions/${sessionId}`, {
@@ -274,8 +333,8 @@ export default function PomodoroPage() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               endTime: new Date().toISOString(),
-              completed: false, // スキップなので完了ではない
-              skipped: true, // スキップフラグ
+              completed: false,
+              skipped: true,
             }),
           });
         } catch (error) {
@@ -283,31 +342,25 @@ export default function PomodoroPage() {
         }
       }
 
-      // 通知（スキップ）
       toast("作業タイマーをスキップしました", {
         description: "録画は破棄され、完了ポモドーロはカウントされません。",
       });
 
-      // 休憩タイマーに移行
       setTimerType("break");
       setTimeLeft(breakDuration * 60);
       setTotalTime(breakDuration * 60);
       setTimerState("idle");
-      setSessionId(undefined); // セッションIDをリセット
-
-      // 注意：完了ポモドーロのカウントアップは行わない
+      setSessionId(undefined);
     } else {
-      // 休憩タイマーのスキップ処理
       toast("休憩をスキップしました", {
         description: "次の作業を開始しましょう！",
       });
 
-      // 作業タイマーに移行
       setTimerType("work");
       setTimeLeft(workDuration * 60);
       setTotalTime(workDuration * 60);
       setTimerState("idle");
-      setSessionId(undefined); // 新しいセッションのため初期化
+      setSessionId(undefined);
     }
   }, [
     timerType,
@@ -320,11 +373,10 @@ export default function PomodoroPage() {
     previewUrl,
     resetStatus,
     sessionId,
-  ]); // 動画保存（アップロード）
+  ]);
   const handleSaveVideo = useCallback(async () => {
     if (!encodedBlob || !sessionId) return;
     try {
-      // 1. 録画制限チェック（シンプルなチェック）
       const limitCheckResponse = await fetch(`/api/recording-check`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -336,7 +388,6 @@ export default function PomodoroPage() {
       if (!limitCheckResponse.ok) {
         const error = await limitCheckResponse.json();
         if (error.code === "RECORDING_LIMIT_EXCEEDED") {
-          // SubscriptionLimitModalで詳細を表示
           setLimitError({
             currentCount: error.currentCount,
             maxCount: error.maxCount,
@@ -350,13 +401,11 @@ export default function PomodoroPage() {
         throw new Error("録画制限チェックに失敗しました");
       }
 
-      // 2. Firebase Storage にアップロード
       const downloadUrl = await uploadVideo(
         encodedBlob,
         `timelapse/pomodoro-${sessionId}-${Date.now()}.mp4`
       );
 
-      // 3. Session を更新
       await fetch(`/api/pomodoro/sessions/${sessionId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -391,7 +440,6 @@ export default function PomodoroPage() {
     workDuration,
   ]);
 
-  // 動画破棄
   const handleDiscardVideo = useCallback(async () => {
     if (sessionId) {
       try {
@@ -418,26 +466,20 @@ export default function PomodoroPage() {
     clearFrames();
   }, [sessionId, previewUrl, resetStatus, clearFrames]);
 
-  // タイマーの完了処理
   const handleTimerCompleted = useCallback(async () => {
-    setTimerEndTime(null); // 完了時もクリア
+    setTimerEndTime(null);
     if (timerType === "work") {
-      // カメラが有効な場合のみ録画停止と動画処理
       if (isCameraEnabled) {
-        // 録画停止
         stopRecording();
 
-        // 最後のフレームを確実にキャプチャ
         if (videoRef.current) {
           captureFrame(videoRef.current);
         }
 
-        // 少し待ってからフレームの状況を確認
         await new Promise((resolve) => setTimeout(resolve, 500));
 
         console.log(`キャプチャしたフレーム: ${frames.length}枚`);
 
-        // フレームがある場合のみエンコード
         if (frames.length > 0) {
           try {
             const blob = await encodeFrames(frames, {
@@ -463,7 +505,6 @@ export default function PomodoroPage() {
           });
         }
       } else {
-        // カメラがオフの場合は直接セッション完了処理
         if (sessionId) {
           try {
             await fetch(`/api/pomodoro/sessions/${sessionId}`, {
@@ -472,7 +513,7 @@ export default function PomodoroPage() {
               body: JSON.stringify({
                 endTime: new Date().toISOString(),
                 completed: true,
-                recordingDuration: Math.round(workDuration * 60), // 実際の作業時間
+                recordingDuration: Math.round(workDuration * 60),
               }),
             });
           } catch (error) {
@@ -481,7 +522,6 @@ export default function PomodoroPage() {
         }
       }
 
-      // 通知とタイマー状態更新
       sendNotification("ポモドーロ完了", {
         body: "お疲れさまでした！休憩時間です。",
         icon: "/favicon.ico",
@@ -489,12 +529,12 @@ export default function PomodoroPage() {
       toast("ポモドーロ完了", {
         description: "お疲れさまでした！休憩時間です。",
       });
+      setIsCameraEnabled(true);
       setTimerType("break");
       setTimeLeft(breakDuration * 60);
       setTotalTime(breakDuration * 60);
       setTimerState("idle");
 
-      // タスクの完了ポモ数を更新
       if (task && taskId) {
         try {
           const res = await fetch(`/api/tasks/${taskId}`, {
@@ -513,7 +553,6 @@ export default function PomodoroPage() {
         }
       }
     } else {
-      // 休憩セッション完了の処理
       playNotificationSound();
       sendNotification("休憩完了", {
         body: "次のポモドーロを開始しましょう！",
@@ -522,11 +561,12 @@ export default function PomodoroPage() {
       toast("休憩完了", {
         description: "次のポモドーロを開始しましょう！",
       });
+      setIsCameraEnabled(true);
       setTimerType("work");
       setTimeLeft(workDuration * 60);
       setTotalTime(workDuration * 60);
       setTimerState("idle");
-      setSessionId(undefined); // 新しいセッションのため初期化
+      setSessionId(undefined);
     }
   }, [
     timerType,
@@ -543,7 +583,6 @@ export default function PomodoroPage() {
     sessionId,
   ]);
 
-  // タスクのステータスを更新する
   const updateTaskStatus = async (
     status: "TODO" | "IN_PROGRESS" | "COMPLETED"
   ) => {
@@ -569,7 +608,6 @@ export default function PomodoroPage() {
     }
   };
 
-  // タイマーのカウントダウン
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (timerState === "running" && timerEndTime) {
@@ -585,7 +623,7 @@ export default function PomodoroPage() {
           setTimerEndTime(null);
           handleTimerCompleted();
         }
-      }, 250); // 250msごとにチェックして滑らかに
+      }, 250);
     }
     return () => {
       clearInterval(interval);
@@ -594,47 +632,33 @@ export default function PomodoroPage() {
 
   useEffect(() => {
     if (videoRef.current && isRecording) {
-      console.log("videoRef が変更されたため captureFrame を1回呼び出し");
       captureFrame(videoRef.current);
     }
   }, [videoRef, isRecording, captureFrame]);
 
-  // タイマー実行中に定期的にフレームをキャプチャするための効果
   useEffect(() => {
-    // タイマーが実行中かつ録画中かつカメラが有効な場合のみフレームをキャプチャする
     if (
       timerState === "running" &&
       isRecording &&
       isCameraEnabled &&
       videoRef.current
     ) {
-      console.log("タイマー実行中のフレームキャプチャを開始します");
-
-      // 3秒ごとにフレームをキャプチャする
       const captureIntervalId = setInterval(() => {
         if (videoRef.current) {
-          console.log(
-            "タイマー実行中にフレームをキャプチャします",
-            new Date().toISOString()
-          );
           captureFrame(videoRef.current);
         }
-      }, 3000); // 3秒間隔でキャプチャ（頻度を下げて安定性を確保）
+      }, 1000);
 
       return () => {
-        console.log("タイマー実行中のフレームキャプチャを停止します");
         clearInterval(captureIntervalId);
       };
     }
   }, [timerState, isRecording, isCameraEnabled, videoRef, captureFrame]);
 
-  // ページ離脱時の確認
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (timerState === "running" || timerState === "paused") {
         e.preventDefault();
-        // e.returnValue = "タイマーが実行中です。本当にページを離れますか？";
-        // return e.returnValue;
       }
     };
     window.addEventListener("beforeunload", handleBeforeUnload);
@@ -643,19 +667,9 @@ export default function PomodoroPage() {
     };
   }, [timerState]);
 
-  // 進捗率の計算
-  // const calculateProgress = (): number => {
-  //   return ((totalTime - timeLeft) / totalTime) * 100;
-  // };
-
-  // アップグレード処理
-
   const handleUpgrade = () => {
-    // 価格ページにリダイレクト
     router.push("/pricing");
   };
-
-  // 制限モーダルを閉じる
 
   const handleCloseLimitModal = () => {
     setShowLimitModal(false);
@@ -675,10 +689,8 @@ export default function PomodoroPage() {
       </Button>
 
       <div className="grid gap-4 sm:gap-6">
-        {/* タスク情報表示 - タスクがある場合のみ表示 */}
         {!isLoading && task && <TaskSummary task={task} />}
 
-        {/* ポモドーロ設定情報（固定値を表示） */}
         <Card className="overflow-hidden">
           <CardContent className="px-4 sm:px-6">
             <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">
@@ -706,9 +718,7 @@ export default function PomodoroPage() {
           </CardContent>
         </Card>
 
-        {/* ポモドーロタイマー */}
         <div className="flex flex-col items-center justify-center space-y-4 sm:space-y-6">
-          {/* Enhanced Timer Display */}
           <div className="w-full max-w-sm">
             <EnhancedTimerDisplay
               timeLeft={timeLeft}
@@ -720,6 +730,7 @@ export default function PomodoroPage() {
               formatTime={formatTime}
               workAlarmSound={userSettings.workAlarmSound}
               breakAlarmSound={userSettings.breakAlarmSound}
+              soundVolume={userSettings.soundVolume}
             />
           </div>
 
@@ -730,17 +741,7 @@ export default function PomodoroPage() {
             onSkip={skipTimer}
             timerType={timerType}
           />
-
-          {/* <div className="text-center space-y-2 px-4">
-            <div className="text-xs sm:text-sm text-muted-foreground">
-              {timerType === "work"
-                ? "集中して作業に取り組みましょう！"
-                : "しっかり休憩をとりましょう。次のサイクルに備えてください。"}
-            </div>
-          </div> */}
         </div>
-
-        {/* カメラプレビュー */}
         <Card className="overflow-hidden">
           <CardContent className=" sm:px-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 sm:mb-4 gap-2 ">
@@ -792,7 +793,6 @@ export default function PomodoroPage() {
           </CardContent>
         </Card>
 
-        {/* タイマー終了後の動画確認・保存UI */}
         <Dialog
           open={showVideoConfirm}
           onOpenChange={(open) => {
@@ -808,7 +808,6 @@ export default function PomodoroPage() {
                 録画した動画を確認し、保存または破棄できます。
               </DialogDescription>
             </DialogHeader>
-            {/* エンコード中はスピナーと進捗 */}
             {encodingStatus?.isEncoding ? (
               <div className="flex items-center gap-2 mt-4">
                 <Spinner />
@@ -846,8 +845,6 @@ export default function PomodoroPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-
-        {/* アップロード進捗・完了表示 */}
         {uploadStatus.isUploading && (
           <div className="my-4">
             <p>アップロード中... {uploadStatus.progress}%</p>
@@ -868,7 +865,6 @@ export default function PomodoroPage() {
           </div>
         )}
 
-        {/* 録画制限モーダル */}
         {limitError && (
           <SubscriptionLimitModal
             isOpen={showLimitModal}
@@ -880,6 +876,7 @@ export default function PomodoroPage() {
             onUpgrade={handleUpgrade}
             customMessage={limitError.error}
             recordingLimitType="ROOM"
+            userRole="PERFORMER"
             roomOwnerName={limitError.roomOwnerName}
           />
         )}

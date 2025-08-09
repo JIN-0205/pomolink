@@ -2,7 +2,6 @@ import prisma from "@/lib/db";
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 
-// ルーム参加者一覧取得API
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ roomId: string }> }
@@ -21,7 +20,6 @@ export async function GET(
       return new NextResponse("ユーザーが見つかりません", { status: 404 });
     }
 
-    // ルームを確認
     const roomId = (await params).roomId;
     const room = await prisma.room.findUnique({
       where: { id: roomId },
@@ -38,7 +36,7 @@ export async function GET(
             },
           },
           orderBy: {
-            joinedAt: "asc", // 参加順に並べる
+            joinedAt: "asc",
           },
         },
       },
@@ -48,7 +46,6 @@ export async function GET(
       return new NextResponse("ルームが見つかりません", { status: 404 });
     }
 
-    // 要求元ユーザーがルームに参加しているか確認
     const isUserInRoom = room.participants.some((p) => p.user.id === user.id);
     if (!isUserInRoom) {
       return new NextResponse("アクセス権限がありません", { status: 403 });

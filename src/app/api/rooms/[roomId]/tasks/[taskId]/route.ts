@@ -16,7 +16,6 @@ export async function PATCH(
   if (!status || !["TODO", "IN_PROGRESS", "COMPLETED"].includes(status)) {
     return NextResponse.json({ error: "不正なステータス値" }, { status: 400 });
   }
-  // タスクがルームに属しているかチェック
   const task = await prisma.task.findUnique({ where: { id: taskId } });
   if (!task || task.roomId !== roomId) {
     return NextResponse.json(
@@ -24,7 +23,6 @@ export async function PATCH(
       { status: 404 }
     );
   }
-  // ステータス更新
   const updated = await prisma.task.update({
     where: { id: taskId },
     data: { status },

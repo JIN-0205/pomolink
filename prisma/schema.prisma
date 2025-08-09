@@ -13,7 +13,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Clerkと連携するユーザーモデル
 model User {
   id        String   @id @default(cuid())
   clerkId   String   @unique
@@ -23,10 +22,8 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // 通知設定
   emailNotifications Boolean @default(true)
 
-  // 詳細なメール通知設定
   emailInvitations      Boolean @default(true)
   emailPomodoroComplete Boolean @default(true)
   emailSessionSummary   Boolean @default(true)
@@ -34,35 +31,26 @@ model User {
   emailWeeklyReports    Boolean @default(false)
   emailMaintenance      Boolean @default(true)
 
-  // タイマー設定を追加
   workAlarmSound  String @default("buzzer") // "buzzer" | "siren" | "retro" | "kalimba" | "levelup"
   breakAlarmSound String @default("kalimba") // "buzzer" | "siren" | "retro" | "kalimba" | "levelup"
+  soundVolume     Float  @default(0.5) // (0.0-1.0)
 
-  // ユーザーが作成したルーム（プランナーとして）
   createdRooms Room[] @relation("RoomCreator")
 
-  // メインプランナーとして設定されているルーム
   mainPlannerRooms Room[] @relation("RoomMainPlanner")
 
-  // ユーザーが参加しているルーム
   participantRooms RoomParticipant[]
 
-  // ユーザーに送られた招待
   receivedInvitations Invitation[] @relation("InvitationReceiver")
 
-  // ユーザーが送った招待
   sentInvitations Invitation[] @relation("InvitationSender")
 
-  // タスク提案
   taskProposals TaskProposal[]
-
-  dailyReports DailyReport[]
 
   sessions Session[]
   uploads  Upload[]
 
-  pointHistory   PointHistory[]
-  recordingUsage RecordingUsage[]
+  pointHistory PointHistory[]
 
   planType PlanType @default(FREE)
 }
@@ -73,7 +61,6 @@ enum PlanType {
   PREMIUM
 }
 
-// ルームモデル
 model Room {
   id          String   @id @default(cuid())
   name        String
@@ -83,35 +70,27 @@ model Room {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  // ルーム作成者 (プランナー)
   creatorId String
   creator   User   @relation("RoomCreator", fields: [creatorId], references: [id], onDelete: Cascade)
 
-  // メインプランナー（デフォルトは作成者、変更可能）
   mainPlannerId String?
   mainPlanner   User?   @relation("RoomMainPlanner", fields: [mainPlannerId], references: [id], onDelete: SetNull)
 
-  // ルーム参加者
   participants RoomParticipant[]
 
-  // ルーム内のタスク
   tasks Task[]
 
-  // タスク提案
   taskProposals TaskProposal[]
 
-  // ルームへの招待
   invitations  Invitation[]
   PointHistory PointHistory[]
 }
 
-// ルーム参加者の中間テーブル
 model RoomParticipant {
   id       String   @id @default(cuid())
-  role     UserRole // PLANNER or PERFORMER
+  role     UserRole
   joinedAt DateTime @default(now())
 
-  // 関連するユーザーとルーム
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -121,13 +100,11 @@ model RoomParticipant {
   @@unique([userId, roomId])
 }
 
-// ユーザーロール
 enum UserRole {
   PLANNER
   PERFORMER
 }
 
-// 招待モデル
 model Invitation {
   id        String           @id @default(cuid())
   createdAt DateTime         @default(now())
@@ -135,26 +112,20 @@ model Invitation {
   status    InvitationStatus @default(PENDING)
   role      UserRole         @default(PERFORMER)
 
-  // 招待元ルーム
   roomId String
   room   Room   @relation(fields: [roomId], references: [id], onDelete: Cascade)
 
-  // 招待を送ったユーザー
   senderId String
   sender   User   @relation("InvitationSender", fields: [senderId], references: [id], onDelete: Cascade)
 
-  // 招待されたユーザー (メールアドレスのみの場合はnull)
   receiverId String?
   receiver   User?   @relation("InvitationReceiver", fields: [receiverId], references: [id])
 
-  // メールアドレスのみでの招待の場合
   email String?
 
-  // 招待方法
   method InvitationMethod
 }
 
-// 招待のステータス
 enum InvitationStatus {
   PENDING
   ACCEPTED
@@ -162,20 +133,17 @@ enum InvitationStatus {
   EXPIRED
 }
 
-// 招待方法
 enum InvitationMethod {
   LINK
   EMAIL
 }
 
-// タスクの優先度
 enum Priority {
   LOW
   MEDIUM
   HIGH
 }
 
-// タスクのステータス
 enum TaskStatus {
   TODO
   IN_PROGRESS
@@ -197,11 +165,7 @@ model Session {
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
-  dailyReport   DailyReport? @relation(fields: [dailyReportId], references: [id])
-  dailyReportId String?
-
-  uploads        Upload[]
-  recordingUsage RecordingUsage?
+  uploads Upload[]
 }
 
 model Task {
@@ -212,8 +176,8 @@ model Task {
   priority       Priority   @default(MEDIUM)
   estimatedPomos Int?
   completedPomos Int        @default(0)
-  workDuration   Int?       @default(25) // ポモドーロ作業時間（分）
-  breakDuration  Int?       @default(5) // ポモドーロ休憩時間（分）
+  workDuration   Int?       @default(25)
+  breakDuration  Int?       @default(5)
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
   dueDate        DateTime?
@@ -238,19 +202,6 @@ model Upload {
 
   task   Task?   @relation(fields: [taskId], references: [id], onDelete: Cascade)
   taskId String?
-
-  dailyReport   DailyReport? @relation(fields: [dailyReportId], references: [id])
-  dailyReportId String?
-}
-
-model DailyReport {
-  id        String    @id @default(cuid())
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId    String
-  date      DateTime  @unique // その日の YYYY-MM-DD を保持
-  sessions  Session[]
-  uploads   Upload[]
-  createdAt DateTime  @default(now())
 }
 
 model PointHistory {
@@ -266,7 +217,6 @@ model PointHistory {
   createdAt     DateTime  @default(now())
 }
 
-// タスク提案モデル
 model TaskProposal {
   id          String         @id @default(cuid())
   roomId      String
@@ -276,8 +226,8 @@ model TaskProposal {
   title       String
   description String?
   status      ProposalStatus @default(PENDING)
-  reviewedBy  String? // レビューしたプランナーのID
-  reviewNote  String? // プランナーからのコメント
+  reviewedBy  String?
+  reviewNote  String?
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 }
@@ -293,19 +243,4 @@ enum PointType {
   SUBMISSION
   SESSION_BONUS
   PLANNER_BONUS
-}
-
-// 録画使用量の追跡
-model RecordingUsage {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  date      DateTime @default(now()) // 録画した日付
-  sessionId String?  @unique
-  session   Session? @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  fileSize  Int? // ファイルサイズ（bytes）
-  duration  Int? // 録画時間（秒）
-  createdAt DateTime @default(now())
-
-  @@index([userId, date])
 }

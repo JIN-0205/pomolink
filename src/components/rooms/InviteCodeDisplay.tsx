@@ -24,7 +24,7 @@ export function InviteCodeDisplay({
   // 招待リンクの生成
   const inviteLink = `${
     typeof window !== "undefined" ? window.location.origin : ""
-  }/join?code=${inviteCode}`;
+  }/rooms/join?code=${inviteCode}`;
 
   // 招待リンクをコピー
   const handleCopy = async () => {

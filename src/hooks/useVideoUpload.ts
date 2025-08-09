@@ -1,6 +1,5 @@
-import firebaseApp, { storage } from "@/lib/firebase";
+import { storage } from "@/lib/firebase";
 import { useUser } from "@clerk/nextjs";
-import { getAuth } from "firebase/auth";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { useCallback, useState } from "react";
 import { useFirebaseAuthSync } from "./useFirebaseAuthSync";
@@ -32,9 +31,6 @@ export function useVideoUpload(): UseVideoUploadReturn {
     downloadUrl: null,
   });
 
-  console.log("Clerk user.id:", user?.id);
-  console.log("Firebase Auth uid:", getAuth(firebaseApp).currentUser?.uid);
-
   /**
    * Firebase Storageにビデオをアップロード
    * @param blob ビデオBlobデータ
@@ -51,25 +47,20 @@ export function useVideoUpload(): UseVideoUploadReturn {
       });
 
       try {
-        // ClerkのuserIdを取得
         const userId = user?.id;
         if (!userId) {
           throw new Error(
             "ユーザー情報が取得できません。サインインしてください。"
           );
         }
-        // アップロード先のパスを決定
         const fileName = `${userId}-${Date.now()}.mp4`;
         const uploadPath = `timelapse/${userId}/${fileName}`;
         const fileRef = ref(storage, uploadPath);
 
-        // Firebase Storageにアップロード
         await uploadBytes(fileRef, blob, { contentType: "video/mp4" });
 
-        // ダウンロードURLを取得
         const downloadUrl = await getDownloadURL(fileRef);
 
-        // アップロード成功ステータスを設定
         setUploadStatus({
           isUploading: false,
           progress: 100,
@@ -81,7 +72,6 @@ export function useVideoUpload(): UseVideoUploadReturn {
       } catch (error: unknown) {
         console.error("アップロードエラー:", error);
 
-        // エラーステータスを設定
         setUploadStatus({
           isUploading: false,
           progress: 0,
@@ -95,9 +85,6 @@ export function useVideoUpload(): UseVideoUploadReturn {
     [user]
   );
 
-  /**
-   * アップロードステータスをリセット
-   */
   const resetUploadStatus = useCallback(() => {
     setUploadStatus({
       isUploading: false,

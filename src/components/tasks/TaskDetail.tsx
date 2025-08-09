@@ -19,7 +19,7 @@ import {
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { Session, Task, UploadType } from "@/types";
+import type { RoomWithParticipants, Session, Task, UploadType } from "@/types";
 import { format } from "date-fns";
 import { Clock, Edit, Play } from "lucide-react";
 import Image from "next/image";
@@ -33,6 +33,7 @@ interface TaskDetailProps {
   task: Task;
   sessions: Session[];
   isPlanner: boolean;
+  room?: RoomWithParticipants;
 }
 
 const fetcher = async (url: string): Promise<{ uploads: UploadType[] }> => {
@@ -41,7 +42,7 @@ const fetcher = async (url: string): Promise<{ uploads: UploadType[] }> => {
   return res.json();
 };
 
-const TaskDetail = ({ task, sessions, isPlanner }: TaskDetailProps) => {
+const TaskDetail = ({ task, sessions, isPlanner, room }: TaskDetailProps) => {
   const router = useRouter();
 
   const [uploadLoading, setUploadLoading] = useState(false);
@@ -53,6 +54,14 @@ const TaskDetail = ({ task, sessions, isPlanner }: TaskDetailProps) => {
   const [api, setApi] = useState<CarouselApi | null>(null);
   const [count, setCount] = useState(0);
   const [current, setCurrent] = useState(0);
+
+  // ルーム情報からオーナー名を取得
+  const roomOwnerName =
+    room?.participants?.find((p) => p.userId === room.creatorId)?.user?.name ||
+    "プランナー";
+
+  // 現在のユーザーがパフォーマーかどうか
+  const userRole = isPlanner ? "PLANNER" : "PERFORMER";
 
   const { data, mutate } = useSWR<{ uploads: UploadType[] }>(
     `/api/tasks/${task.id}/upload`,
@@ -240,6 +249,8 @@ const TaskDetail = ({ task, sessions, isPlanner }: TaskDetailProps) => {
               }}
               uploadLoading={uploadLoading}
               setUploadLoading={setUploadLoading}
+              userRole={userRole}
+              roomOwnerName={roomOwnerName}
             />
           )}
 

@@ -2,7 +2,6 @@ import prisma from "@/lib/db";
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 
-// タスク提案一覧取得API
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ roomId: string }> }
@@ -23,7 +22,6 @@ export async function GET(
       return new NextResponse("ユーザーが見つかりません", { status: 404 });
     }
 
-    // ルームの確認とユーザーの参加確認
     const room = await prisma.room.findUnique({
       where: { id: roomId },
       include: {
@@ -41,7 +39,6 @@ export async function GET(
       return new NextResponse("アクセス権限がありません", { status: 403 });
     }
 
-    // タスク提案一覧を取得
     const proposals = await prisma.taskProposal.findMany({
       where: { roomId },
       include: {
@@ -64,7 +61,6 @@ export async function GET(
   }
 }
 
-// タスク提案作成API
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ roomId: string }> }
@@ -91,7 +87,6 @@ export async function POST(
       return new NextResponse("タスクタイトルは必須です", { status: 400 });
     }
 
-    // ルームの確認とユーザーの参加確認
     const room = await prisma.room.findUnique({
       where: { id: roomId },
       include: {
@@ -111,14 +106,12 @@ export async function POST(
 
     const userParticipant = room.participants[0];
 
-    // パフォーマーのみがタスク提案可能
     if (userParticipant.role !== "PERFORMER") {
       return new NextResponse("タスクの提案はパフォーマーのみ可能です", {
         status: 403,
       });
     }
 
-    // タスク提案を作成
     const proposal = await prisma.taskProposal.create({
       data: {
         roomId,

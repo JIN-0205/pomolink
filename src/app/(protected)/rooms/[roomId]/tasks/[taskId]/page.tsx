@@ -22,11 +22,9 @@ interface TaskPageProps {
 export default function TaskPage({ params }: TaskPageProps) {
   const router = useRouter();
 
-  // paramsをReact.use()でアンラップ
   const resolvedParams = React.use(params);
   const { roomId, taskId } = resolvedParams;
 
-  // Taskと関連Sessionのみ管理
   const [task, setTask] = useState<Task | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
@@ -84,6 +82,7 @@ export default function TaskPage({ params }: TaskPageProps) {
         const data = await response.json();
         console.log("取得したタスク:", data);
         setTask(data);
+        console.log("取得したセッション:", data.sessions);
         setSessions(Array.isArray(data.sessions) ? data.sessions : []);
       } catch (error) {
         console.error("タスク取得エラー:", error);
@@ -97,7 +96,6 @@ export default function TaskPage({ params }: TaskPageProps) {
     fetchTaskAndSessions();
   }, [taskId]);
 
-  // ルーム一覧へ戻る
   const handleBack = () => {
     router.push(`/rooms/${roomId}?tab=tasks`);
   };
@@ -134,7 +132,12 @@ export default function TaskPage({ params }: TaskPageProps) {
       </Button>
       <div className="mb-8">
         <h2 className="text-2xl font-bold mb-4">タスク詳細</h2>
-        <TaskDetail task={task} sessions={sessions} isPlanner={isPlanner} />
+        <TaskDetail
+          task={task}
+          sessions={sessions}
+          isPlanner={isPlanner}
+          room={room || undefined}
+        />
       </div>
     </div>
   );

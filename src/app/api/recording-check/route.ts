@@ -1,19 +1,14 @@
 import prisma from "@/lib/db";
+import { getPlanLimits } from "@/lib/subscription-limits";
+import { getRoomPlan } from "@/lib/subscription-service";
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 
-// プランごとの日次録画制限
-const PLAN_LIMITS = {
-  FREE: 1,
-  BASIC: 6,
-  PREMIUM: 15,
-} as const;
-
 /**
- * シンプルな録画制限チェック専用API
- * セッションテーブルを直接使用して制限をチェック
+ * simple recording check API
+ * - Checks if the user can record based on their plan limits
  */
 export async function POST(req: NextRequest) {
   try {
@@ -27,7 +22,6 @@ export async function POST(req: NextRequest) {
       return new NextResponse("sessionIdが必要です", { status: 400 });
     }
 
-    // セッション、ルーム、ルーム作成者の情報を一度に取得
     const session = await prisma.session.findUnique({
       where: { id: sessionId },
       include: {
@@ -35,7 +29,7 @@ export async function POST(req: NextRequest) {
           include: {
             room: {
               include: {
-                creator: true, // ルーム作成者の情報
+                creator: true,
               },
             },
           },
@@ -47,31 +41,28 @@ export async function POST(req: NextRequest) {
       return new NextResponse("セッションが見つかりません", { status: 404 });
     }
 
-    // セッションが既に録画済みかチェック
     if (session.recordingUrl) {
       return new NextResponse("このセッションは既に録画済みです", {
         status: 400,
       });
     }
 
-    // ルーム作成者のプランタイプを取得
-    const planType = session.task.room.creator.planType;
-    const maxRecordings = PLAN_LIMITS[planType];
+    const planType = await getRoomPlan(session.task.roomId);
+    const planLimits = getPlanLimits(planType);
+    const maxRecordings = planLimits.maxDailyRecordings;
 
-    // 今日の開始時刻を設定
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    // 同じroomIdで今日録画されたセッション数をカウント
     const todayRecordingCount = await prisma.session.count({
       where: {
         task: {
           roomId: session.task.roomId,
         },
         recordingUrl: {
-          not: null, // 録画URLがあるセッション
+          not: null,
         },
         startTime: {
           gte: today,
@@ -86,7 +77,6 @@ export async function POST(req: NextRequest) {
     console.log("制限数:", maxRecordings);
     console.log("今日の録画数:", todayRecordingCount);
 
-    // 制限チェック
     if (todayRecordingCount >= maxRecordings) {
       return NextResponse.json(
         {

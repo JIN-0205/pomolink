@@ -1,5 +1,6 @@
 import prisma from "@/lib/db";
 import { getStorage } from "@/lib/firebase-admin";
+import { canUpload } from "@/lib/subscription-service";
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
@@ -18,7 +19,6 @@ export async function GET(
       return new NextResponse("ユーザーが見つかりません", { status: 404 });
     }
     const { taskId } = await params;
-    // アクセス権限チェック（ルーム参加者のみ）
     const task = await prisma.task.findUnique({
       where: { id: taskId },
       include: { room: { include: { participants: true } } },
@@ -32,7 +32,6 @@ export async function GET(
     if (!isParticipant) {
       return new NextResponse("アクセス権限がありません", { status: 403 });
     }
-    // 画像一覧取得
     const uploads = await prisma.upload.findMany({
       where: { taskId, fileUrl: { not: null } },
       orderBy: { createdAt: "desc" },
@@ -55,7 +54,6 @@ export async function POST(
     if (!user)
       return new NextResponse("ユーザーが見つかりません", { status: 404 });
     const { taskId } = await params;
-    // アクセス権限チェック（ルーム参加者のみ）
     const task = await prisma.task.findUnique({
       where: { id: taskId },
       include: { room: { include: { participants: true } } },
@@ -69,23 +67,36 @@ export async function POST(
     if (!isParticipant) {
       return new NextResponse("アクセス権限がありません", { status: 403 });
     }
-    // multipart/form-dataのパース
     const formData = await req.formData();
     const files = formData.getAll("file");
     const description = formData.get("description");
     if (!files.length) {
       return new NextResponse("ファイルが必要です", { status: 400 });
     }
+
+    const uploadCheck = await canUpload(task.roomId, user.id, files.length);
+    if (!uploadCheck.canUpload) {
+      return NextResponse.json(
+        {
+          error: uploadCheck.reason || "アップロード制限に達しました",
+          currentCount: uploadCheck.currentCount,
+          maxCount: uploadCheck.maxCount,
+          planType: uploadCheck.planType,
+          limitType: uploadCheck.limitType,
+          needsUpgrade: true,
+        },
+        { status: 429 }
+      );
+    }
     const bucket = getStorage().bucket();
     const uploadResults = [];
     for (const file of files) {
       if (typeof file === "string") continue;
-      // まずUploadレコードを作成し、uploadIdを得る
       const uploadRecord = await prisma.upload.create({
         data: {
           userId: user.id,
           taskId,
-          fileUrl: "", // 仮で空
+          fileUrl: "",
           description:
             description && typeof description === "string"
               ? description
@@ -101,12 +112,10 @@ export async function POST(
         contentType: file.type || "image/jpeg",
         public: false,
       });
-      // サイン付きURLを生成（1年有効）
       const [fileUrl] = await fileRef.getSignedUrl({
         action: "read",
         expires: Date.now() + 365 * 24 * 60 * 60 * 1000,
       });
-      // Uploadレコードを更新
       const upload = await prisma.upload.update({
         where: { id: uploadRecord.id },
         data: { fileUrl },
@@ -114,7 +123,6 @@ export async function POST(
       uploadResults.push(upload);
     }
 
-    // 提出ボーナス: 一日一回のみ
     if (uploadResults.length > 0) {
       const startOfDay = new Date();
       startOfDay.setHours(0, 0, 0, 0);

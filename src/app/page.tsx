@@ -13,10 +13,8 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 
-// ISR設定: 30分ごとに再生成
 export const revalidate = 30;
 
-// サーバーサイドで統計データを取得
 async function getPublicStats(): Promise<PublicStats> {
   try {
     console.log("[SSR] 統計データを取得中...");
@@ -54,16 +52,9 @@ export default async function LandingPage() {
   const stats = await getPublicStats();
   return (
     <div className="flex min-h-screen flex-col bg-gradient-to-br from-indigo-50 via-white to-purple-50">
-      {/* ナビゲーションバー */}
       <header className="border-b border-border/50 bg-white/80 backdrop-blur-lg sticky top-0 z-50">
         <div className="container mx-auto flex h-16 items-center px-4 sm:px-6 lg:px-8">
           <div className="flex items-center space-x-3">
-            {/* <div className="w-8 h-8 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-lg flex items-center justify-center mr-3">
-              <Clock className="h-5 w-5 text-white" />
-            </div> */}
-            {/* <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-              PomoLink
-            </h1> */}
             <Image
               src="/icon_trimmed.png"
               alt="PomoLink"
@@ -96,10 +87,8 @@ export default async function LandingPage() {
         </div>
       </header>
 
-      {/* ヒーローセクション */}
       <main className="flex-1">
         <section className="relative py-20 md:py-32 overflow-hidden">
-          {/* 背景装飾 */}
           <div className="absolute inset-0 -z-10">
             <div className="absolute top-0 left-1/4 w-72 h-72 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob"></div>
             <div className="absolute top-0 right-1/4 w-72 h-72 bg-indigo-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-2000"></div>
@@ -108,7 +97,6 @@ export default async function LandingPage() {
 
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="mx-auto max-w-4xl text-center">
-              {/* バッジ */}
               <div className="inline-flex items-center px-4 py-2 bg-white/80 backdrop-blur rounded-full border border-indigo-200 mb-8">
                 <Star className="h-4 w-4 text-yellow-500 mr-2" />
                 <span className="text-sm font-medium text-gray-700">
@@ -144,7 +132,6 @@ export default async function LandingPage() {
                 </Link>
               </div>
 
-              {/* 統計情報 */}
               <div className="mt-16">
                 <StaticStatsCounter initialStats={stats} />
               </div>
@@ -152,7 +139,6 @@ export default async function LandingPage() {
           </div>
         </section>
 
-        {/* 機能セクション */}
         <section id="features" className="py-20 bg-white">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-16">
@@ -229,7 +215,6 @@ export default async function LandingPage() {
           </div>
         </section>
 
-        {/* CTA セクション */}
         <section className="py-20 bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <h2 className="text-3xl font-bold text-white mb-6">
@@ -249,7 +234,6 @@ export default async function LandingPage() {
         </section>
       </main>
 
-      {/* フッター */}
       <footer className="border-t border-border bg-white py-8">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <p className="text-center text-sm text-gray-500">

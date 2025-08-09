@@ -2,6 +2,7 @@
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { isTestMode } from "@/lib/subscription-flag";
 import { PlanType } from "@/lib/subscription-limits";
 import { PricingTable, useUser } from "@clerk/nextjs";
 import { Loader2, RefreshCw } from "lucide-react";
@@ -17,6 +18,7 @@ interface PlanInfo {
     recordingRetentionDays: number;
     price: number;
   };
+  isTestMode?: boolean;
 }
 
 export default function Page() {
@@ -24,6 +26,9 @@ export default function Page() {
   const [planInfo, setPlanInfo] = useState<PlanInfo | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // check if the user is in test mode
+  const testModeEnabled = planInfo?.isTestMode ?? isTestMode();
 
   const fetchPlanInfo = async (showRefreshState = false) => {
     if (showRefreshState) {
@@ -34,9 +39,6 @@ export default function Page() {
 
     try {
       const response = await fetch("/api/subscription/plan");
-      console.log(
-        "\u001b[35m" + "Fetching plan info from /api/subscription/plan"
-      );
       if (response.ok) {
         const data = await response.json();
         setPlanInfo(data);
@@ -61,7 +63,6 @@ export default function Page() {
     fetchPlanInfo(true);
   };
 
-  // Clerkの権限チェック（フォールバック用）
   const hasPremiumAccess =
     user?.hasVerifiedEmailAddress &&
     user?.publicMetadata?.plan === "premium_user";
@@ -71,7 +72,7 @@ export default function Page() {
 
   return (
     <div style={{ maxWidth: "800px", margin: "0 auto", padding: "0 1rem" }}>
-      {/* プラン情報表示セクション */}
+      {/* Plan Information Display Section */}
       <div className="mb-6 p-4 bg-gray-50 rounded-lg">
         <div className="flex items-center justify-between mb-2">
           <h2 className="text-lg font-semibold">現在のプラン</h2>
@@ -118,25 +119,39 @@ export default function Page() {
         )}
       </div>
 
-      {/* Clerk PricingTable */}
-      <PricingTable
-        newSubscriptionRedirectUrl="/pricing/success"
-        appearance={{
-          elements: {
-            commerce: {
-              billedMonthlyOnly: "Billed annually",
+      {/* Test Mode Notification */}
+      {testModeEnabled ? (
+        <div className="text-center p-6 bg-yellow-50 rounded-lg border border-yellow-200">
+          <h3 className="text-lg font-semibold text-yellow-800 mb-2">
+            🧪 テストモード
+          </h3>
+          <p className="text-yellow-700 mb-2">
+            現在、テストモードで動作しています。
+          </p>
+          <p className="text-yellow-600 text-sm">
+            全ての機能がBASICプランの制限で利用可能です。
+            本番環境ではサブスクリプションによるプランのアップグレードが可能になります。
+          </p>
+        </div>
+      ) : (
+        /* Clerk PricingTable */
+        <PricingTable
+          newSubscriptionRedirectUrl="/pricing/success"
+          appearance={{
+            elements: {
+              commerce: {
+                billedMonthlyOnly: "Billed annually",
+              },
             },
-          },
-          variables: {
-            colorPrimary: "#4F46E5", // Tailwind Indigo 600
-            colorText: "#111827", // Tailwind Gray 900
-            colorBackground: "#FFFFFF", // Tailwind White
-          },
-        }}
-      />
-
-      {/* プラン別メッセージ */}
-      {planInfo ? (
+            variables: {
+              colorPrimary: "#4F46E5",
+              colorText: "#111827",
+              colorBackground: "#FFFFFF",
+            },
+          }}
+        />
+      )}
+      {planInfo && !testModeEnabled ? (
         <div className="mt-6">
           {planInfo.planType === "PREMIUM" ? (
             <div className="text-center p-4 bg-purple-50 rounded-lg border border-purple-200">
@@ -168,8 +183,20 @@ export default function Page() {
             </div>
           )}
         </div>
-      ) : (
-        // フォールバック表示（Clerkの権限情報を使用）
+      ) : planInfo && testModeEnabled ? (
+        <div className="mt-6">
+          <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <p className="text-blue-800 font-medium">
+              🧪 テストモード - BASICプラン機能
+            </p>
+            <p className="text-blue-600 text-sm mt-1">
+              最大{planInfo.planLimits.maxParticipants}人での協働、
+              {planInfo.planLimits.maxDailyRecordings}回/日の録画、
+              {planInfo.planLimits.maxRooms}個のルーム作成が可能です
+            </p>
+          </div>
+        </div>
+      ) : !testModeEnabled ? (
         <div className="mt-6">
           {hasPremiumAccess ? (
             <div className="text-center p-4 bg-purple-50 rounded-lg">
@@ -191,7 +218,7 @@ export default function Page() {
             </div>
           )}
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

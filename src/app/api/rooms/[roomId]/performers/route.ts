@@ -14,7 +14,6 @@ export async function GET(
 
     const { roomId } = await params;
 
-    // ユーザーの認証
     const user = await prisma.user.findUnique({
       where: { clerkId },
     });
@@ -23,7 +22,6 @@ export async function GET(
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // ルームの存在確認とユーザーの参加確認
     const room = await prisma.room.findUnique({
       where: { id: roomId },
       include: {
@@ -39,7 +37,6 @@ export async function GET(
       return NextResponse.json({ error: "Room not found" }, { status: 404 });
     }
 
-    // ユーザーがルームに参加しているか確認
     const isParticipant = room.participants.some(
       (participant) => participant.userId === user.id
     );
@@ -48,7 +45,6 @@ export async function GET(
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
-    // PERFORMERロールの参加者のみを取得
     const performers = room.participants
       .filter((participant) => participant.role === "PERFORMER")
       .map((participant) => participant.user);

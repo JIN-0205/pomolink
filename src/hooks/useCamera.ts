@@ -30,7 +30,6 @@ export function useCamera(options: UseCameraOptions = {}): UseCameraReturn {
   // カメラが無効になった時の専用クリーンアップ
   useEffect(() => {
     if (!enabled && stream) {
-      console.log("カメラを無効化中...");
       stream.getTracks().forEach((track) => track.stop());
       setStream(null);
       setIsReady(false);
@@ -50,7 +49,6 @@ export function useCamera(options: UseCameraOptions = {}): UseCameraReturn {
 
     async function setupCamera() {
       try {
-        console.log("カメラを起動中...");
         setError(null);
 
         // カメラストリームを取得
@@ -77,7 +75,6 @@ export function useCamera(options: UseCameraOptions = {}): UseCameraReturn {
           try {
             await videoRef.current.play();
             setIsReady(true);
-            console.log("カメラが正常に起動しました");
           } catch (playError) {
             console.error("ビデオ再生エラー:", playError);
             setError("ビデオの再生に失敗しました");
@@ -100,7 +97,6 @@ export function useCamera(options: UseCameraOptions = {}): UseCameraReturn {
     return () => {
       mounted = false;
       if (mediaStream && mediaStream.active) {
-        console.log("カメラストリームをクリーンアップ中...");
         mediaStream.getTracks().forEach((track) => track.stop());
       }
     };

@@ -2,7 +2,6 @@ import prisma from "@/lib/db";
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 
-// タスク提案詳細取得API
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ roomId: string; proposalId: string }> }
@@ -23,7 +22,6 @@ export async function GET(
       return new NextResponse("ユーザーが見つかりません", { status: 404 });
     }
 
-    // ルームの確認とユーザーの参加確認
     const room = await prisma.room.findUnique({
       where: { id: roomId },
       include: {
@@ -37,7 +35,6 @@ export async function GET(
       return new NextResponse("アクセス権限がありません", { status: 403 });
     }
 
-    // タスク提案を取得
     const proposal = await prisma.taskProposal.findUnique({
       where: { id: proposalId },
       include: {
@@ -63,7 +60,6 @@ export async function GET(
   }
 }
 
-// タスク提案レビューAPI（承認・拒否）
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ roomId: string; proposalId: string }> }
@@ -90,7 +86,6 @@ export async function PATCH(
       return new NextResponse("無効なステータスです", { status: 400 });
     }
 
-    // ルームの確認とプランナー権限の確認
     const room = await prisma.room.findUnique({
       where: { id: roomId },
       include: {
@@ -118,7 +113,6 @@ export async function PATCH(
       });
     }
 
-    // タスク提案を取得
     const proposal = await prisma.taskProposal.findUnique({
       where: { id: proposalId },
     });
@@ -133,11 +127,8 @@ export async function PATCH(
       });
     }
 
-    // 提案を承認の場合はタスクを作成
     if (status === "APPROVED") {
-      // トランザクションで提案更新とタスク作成を実行
       const result = await prisma.$transaction(async (tx) => {
-        // 提案のステータス更新
         const updatedProposal = await tx.taskProposal.update({
           where: { id: proposalId },
           data: {
@@ -147,7 +138,6 @@ export async function PATCH(
           },
         });
 
-        // タスクを作成
         const task = await tx.task.create({
           data: {
             title: proposal.title,
@@ -167,7 +157,6 @@ export async function PATCH(
         message: "タスク提案を承認し、タスクを作成しました",
       });
     } else {
-      // 拒否の場合は提案のステータスのみ更新
       const updatedProposal = await prisma.taskProposal.update({
         where: { id: proposalId },
         data: {
@@ -188,7 +177,6 @@ export async function PATCH(
   }
 }
 
-// タスク提案削除API
 export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ roomId: string; proposalId: string }> }
@@ -209,7 +197,6 @@ export async function DELETE(
       return new NextResponse("ユーザーが見つかりません", { status: 404 });
     }
 
-    // タスク提案を取得
     const proposal = await prisma.taskProposal.findUnique({
       where: { id: proposalId },
       include: {
@@ -236,14 +223,12 @@ export async function DELETE(
       userParticipant.role === "PLANNER" || proposal.room.creatorId === user.id;
     const isProposer = proposal.proposerId === user.id;
 
-    // 提案者自身またはプランナーのみが削除可能
     if (!isProposer && !isPlanner) {
       return new NextResponse("この提案を削除する権限がありません", {
         status: 403,
       });
     }
 
-    // 提案を削除
     await prisma.taskProposal.delete({
       where: { id: proposalId },
     });

@@ -15,18 +15,16 @@ import Link from "next/link";
 
 interface RoomCardProps {
   room: Room;
-  participantCount?: number;
-  role?: "PLANNER" | "PERFORMER";
-  activePomodoros?: number;
-  completedTasks?: number;
+  participantCount: number;
+  role: "PLANNER" | "PERFORMER";
+  completedTasks: number;
 }
 
 export function RoomCard({
   room,
-  participantCount = 0,
+  participantCount,
   role,
-  activePomodoros = 0,
-  completedTasks = 0,
+  completedTasks,
 }: RoomCardProps) {
   const isPlanner = role === "PLANNER";
 
@@ -36,7 +34,7 @@ export function RoomCard({
         className={cn(
           "h-full overflow-hidden transition-all duration-300 hover-lift border-0 shadow-md",
           "bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-900 dark:to-gray-800/50",
-          "group-hover:shadow-xl group-hover:scale-[1.02] py-0 rounded-md"
+          "group-hover:shadow-xl group-hover:scale-[1.02] py-0 rounded-r-xs"
         )}
       >
         {/* カードヘッダー */}
@@ -44,10 +42,11 @@ export function RoomCard({
           {/* 背景装飾 */}
           <div
             className={cn(
-              "absolute -top-px left-0 right-0 h-2 rounded-t-md",
+              "absolute left-0 right-0 h-2 ",
               isPlanner
-                ? "bg-gradient-to-r from-indigo-500 to-purple-500"
-                : "bg-gradient-to-r from-green-500 to-blue-500"
+                ? "bg-gradient-to-r from-indigo-200 to-indigo-500"
+                : // ? "bg-gradient-to-r from-indigo-500 to-purple-500"
+                  "bg-gradient-to-r from-green-200 to-green-500"
             )}
           />
 
@@ -122,33 +121,11 @@ export function RoomCard({
             </div>
           </div>
 
-          {/* アクティブ状態インジケーター */}
-          {activePomodoros > 0 && (
-            <div className="mt-3 flex items-center p-2 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
-              <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse mr-2" />
-              <span className="text-sm text-red-700 dark:text-red-300 font-medium">
-                {activePomodoros}人が集中中
-              </span>
-            </div>
-          )}
-
-          {/* プライベート/パブリック表示 */}
+          {/* 作成日 */}
           <div className="mt-3 flex items-center justify-between">
-            <Badge
-              variant="outline"
-              className={cn(
-                "text-xs",
-                room.isPrivate
-                  ? "border-orange-200 text-orange-700 bg-orange-50 dark:border-orange-700 dark:text-orange-300 dark:bg-orange-900/20"
-                  : "border-green-200 text-green-700 bg-green-50 dark:border-green-700 dark:text-green-300 dark:bg-green-900/20"
-              )}
-            >
-              {room.isPrivate ? "非公開" : "公開"}
-            </Badge>
-
             <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center">
               <Clock className="mr-1 h-3 w-3" />
-              {format(new Date(room.createdAt), "MM/dd", { locale: ja })}
+              {format(new Date(room.createdAt), "yyyy/MM/dd", { locale: ja })}
             </div>
           </div>
         </CardContent>
