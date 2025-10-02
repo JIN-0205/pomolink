@@ -6,7 +6,9 @@ const nextConfig: NextConfig = {
   experimental: {
     allowedDevOrigins: [
       "https://intent-insect-jointly.ngrok-free.app",
-      "*.ngrok-free.app",
+      "https://www.pomolink.net",
+      "*.pomolink.net",
+      // "*.ngrok-free.app",
 
       "local-origin.dev",
       "*.local-origin.dev",

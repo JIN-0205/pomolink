@@ -1,26 +1,51 @@
 import { PlanType } from "@prisma/client";
 
-export const FEATURE_FLAGS = {
-  BILLING_ENABLED: process.env.ENABLE_BILLING === "true",
-  TEST_MODE: process.env.TEST_MODE === "true",
-  DEFAULT_TEST_PLAN: (process.env.DEFAULT_PLAN_FOR_TEST as PlanType) || "BASIC",
-} as const;
+// Dynamic flag reader to avoid build-time snapshot issues.
+function readEnvFlag(name: string): string | undefined {
+  return process.env[name];
+}
+
+function parseBool(val: string | undefined): boolean {
+  return (val ?? "").trim().toLowerCase() === "true";
+}
+
+function parsePlan(val: string | undefined): PlanType {
+  const cleaned = (val ?? "").trim().toUpperCase();
+  if (cleaned === "FREE" || cleaned === "BASIC" || cleaned === "PREMIUM") {
+    return cleaned as PlanType;
+  }
+  return "BASIC"; // safe fallback inside test mode
+}
+
+export function getFeatureFlags() {
+  const billingEnabled = parseBool(readEnvFlag("ENABLE_BILLING"));
+  const testMode = parseBool(readEnvFlag("TEST_MODE"));
+  const defaultPlan = parsePlan(readEnvFlag("DEFAULT_PLAN_FOR_TEST"));
+  return {
+    BILLING_ENABLED: billingEnabled,
+    TEST_MODE: testMode,
+    DEFAULT_TEST_PLAN: defaultPlan,
+  } as const;
+}
 
 export function isBillingEnabled(): boolean {
-  return FEATURE_FLAGS.BILLING_ENABLED && !FEATURE_FLAGS.TEST_MODE;
+  const f = getFeatureFlags();
+  return f.BILLING_ENABLED && !f.TEST_MODE;
 }
 
 export function getDefaultPlanForUser(): PlanType {
-  if (FEATURE_FLAGS.TEST_MODE) {
-    return FEATURE_FLAGS.DEFAULT_TEST_PLAN;
+  const f = getFeatureFlags();
+  if (f.TEST_MODE) {
+    return f.DEFAULT_TEST_PLAN;
   }
   return "FREE";
 }
 
 export function isTestMode(): boolean {
-  return FEATURE_FLAGS.TEST_MODE;
+  return getFeatureFlags().TEST_MODE;
 }
 
 export function canUpgradeSubscription(): boolean {
-  return !FEATURE_FLAGS.TEST_MODE && FEATURE_FLAGS.BILLING_ENABLED;
+  const f = getFeatureFlags();
+  return !f.TEST_MODE && f.BILLING_ENABLED;
 }

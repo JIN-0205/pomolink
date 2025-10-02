@@ -1,6 +1,6 @@
 [
   {
-    "origin": ["https://intent-insect-jointly.ngrok-free.app"],
+    "origin": ["https://www.pomolink.net", "https://pomolink.net"],
     "method": ["GET", "HEAD", "PUT", "POST", "DELETE","OPTIONS"],
     "responseHeader": [
       "Content-Type",

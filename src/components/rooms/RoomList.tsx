@@ -31,7 +31,6 @@ export function RoomList() {
         }
 
         const data = await res.json();
-        // console.log("API response:", data);
         setRooms(data);
       } catch (error) {
         console.error("Error fetching rooms:", error);

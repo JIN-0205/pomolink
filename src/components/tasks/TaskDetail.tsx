@@ -55,12 +55,10 @@ const TaskDetail = ({ task, sessions, isPlanner, room }: TaskDetailProps) => {
   const [count, setCount] = useState(0);
   const [current, setCurrent] = useState(0);
 
-  // ルーム情報からオーナー名を取得
   const roomOwnerName =
     room?.participants?.find((p) => p.userId === room.creatorId)?.user?.name ||
     "プランナー";
 
-  // 現在のユーザーがパフォーマーかどうか
   const userRole = isPlanner ? "PLANNER" : "PERFORMER";
 
   const { data, mutate } = useSWR<{ uploads: UploadType[] }>(
@@ -69,9 +67,7 @@ const TaskDetail = ({ task, sessions, isPlanner, room }: TaskDetailProps) => {
   );
   const uploads = useMemo(() => data?.uploads ?? [], [data]);
 
-  // 日付ごとに提出物とセッションをまとめてグループ化
   const groupedByDate = useMemo(() => {
-    // 1. 提出物を日付ごとにグループ化
     const uploadsByDate: Record<string, UploadType[]> = uploads.reduce(
       (acc, upload) => {
         const date = format(new Date(upload.createdAt), "yyyy-MM-dd");
@@ -81,7 +77,6 @@ const TaskDetail = ({ task, sessions, isPlanner, room }: TaskDetailProps) => {
       },
       {} as Record<string, UploadType[]>
     );
-    // 2. セッションも日付ごとにグループ化
     const sessionsByDate: Record<string, Session[]> = sessions.reduce(
       (acc, session) => {
         const date = format(new Date(session.startTime), "yyyy-MM-dd");
@@ -91,12 +86,12 @@ const TaskDetail = ({ task, sessions, isPlanner, room }: TaskDetailProps) => {
       },
       {} as Record<string, Session[]>
     );
-    // 3. 日付のユニーク集合
+
     const allDates = Array.from(
       new Set([...Object.keys(uploadsByDate), ...Object.keys(sessionsByDate)])
     );
-    allDates.sort((a, b) => b.localeCompare(a)); // 新しい順
-    // 4. 日付ごとにまとめて返す
+    allDates.sort((a, b) => b.localeCompare(a));
+
     return allDates.map((date) => ({
       date,
       uploads: uploadsByDate[date] || [],
@@ -104,10 +99,8 @@ const TaskDetail = ({ task, sessions, isPlanner, room }: TaskDetailProps) => {
     }));
   }, [uploads, sessions]);
 
-  // ポモドーロページに遷移する関数
   const startPomodoro = async () => {
     try {
-      // 訪問APIは廃止、直接ポモドーロページへ遷移
       router.push(`/rooms/${task.roomId}/pomodoro?taskId=${task.id}`);
     } catch (error) {
       console.error(error);
@@ -115,7 +108,6 @@ const TaskDetail = ({ task, sessions, isPlanner, room }: TaskDetailProps) => {
     }
   };
 
-  // 画像クリック時にインデックスとグループもセット
   const handleImageClick = useCallback(
     (fileUrl: string, uploads: UploadType[]) => {
       const idx = uploads.findIndex((u) => u.fileUrl === fileUrl);
@@ -232,19 +224,16 @@ const TaskDetail = ({ task, sessions, isPlanner, room }: TaskDetailProps) => {
             </div>
           )}
 
-          {/* 提出物アップロードUI */}
           {!isPlanner && (
             <ImageUpload
               taskId={task.id}
               onUploadSuccess={(newUploads) => {
-                // Optimistically update uploads list
                 mutate(
                   (current) => ({
                     uploads: [...(current?.uploads ?? []), ...newUploads],
                   }),
                   false
                 );
-                // Revalidate to fetch latest data
                 mutate();
               }}
               uploadLoading={uploadLoading}

@@ -27,7 +27,7 @@ export default function Page() {
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // check if the user is in test mode
+  // check if the user is in test mode (fallback to build-time flag if API not loaded yet)
   const testModeEnabled = planInfo?.isTestMode ?? isTestMode();
 
   const fetchPlanInfo = async (showRefreshState = false) => {
@@ -38,7 +38,9 @@ export default function Page() {
     }
 
     try {
-      const response = await fetch("/api/subscription/plan");
+      const response = await fetch("/api/subscription/plan", {
+        cache: "no-store",
+      });
       if (response.ok) {
         const data = await response.json();
         setPlanInfo(data);
@@ -58,6 +60,8 @@ export default function Page() {
       fetchPlanInfo();
     }
   }, [isLoaded, user]);
+
+  // (debug logs removed)
 
   const handleRefresh = () => {
     fetchPlanInfo(true);

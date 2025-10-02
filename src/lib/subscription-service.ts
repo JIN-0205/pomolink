@@ -1,13 +1,13 @@
 import { auth } from "@clerk/nextjs/server";
 import { PlanType, PrismaClient } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
-import { FEATURE_FLAGS, getDefaultPlanForUser } from "./subscription-flag";
+import { getDefaultPlanForUser, getFeatureFlags } from "./subscription-flag";
 import { getPlanLimits, PLAN_LIMITS } from "./subscription-limits";
 
 const prisma = new PrismaClient();
 
 export async function getUserSubscription(): Promise<PlanType> {
-  if (FEATURE_FLAGS.TEST_MODE) {
+  if (getFeatureFlags().TEST_MODE) {
     return getDefaultPlanForUser();
   }
   const { has } = await auth();
@@ -24,10 +24,10 @@ export async function getRoomPlan(roomId: string): Promise<PlanType> {
   console.log("=== ルームプラン取得 ===");
   console.log("Room ID:", roomId);
 
-  if (FEATURE_FLAGS.TEST_MODE) {
+  if (getFeatureFlags().TEST_MODE) {
     console.log(
       "Test mode enabled, using default plan:",
-      FEATURE_FLAGS.DEFAULT_TEST_PLAN
+      getFeatureFlags().DEFAULT_TEST_PLAN
     );
     return getDefaultPlanForUser();
   }
@@ -244,7 +244,7 @@ export async function checkSubscriptionLimits(userId: string, roomId?: string) {
 export async function getUserSubscriptionById(
   userId: string
 ): Promise<PlanType> {
-  if (FEATURE_FLAGS.TEST_MODE) {
+  if (getFeatureFlags().TEST_MODE) {
     return getDefaultPlanForUser();
   }
 
