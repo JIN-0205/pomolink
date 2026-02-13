@@ -49,20 +49,36 @@ export async function POST(req: Request) {
   }
 
   if (evt.type === "user.created" || evt.type === "user.updated") {
-    const { id, email_addresses, first_name, image_url } = evt.data;
-    const email = email_addresses[0].email_address;
+    const { id, email_addresses = [], first_name, last_name, image_url } =
+      evt.data;
+    const primaryEmail = email_addresses.find(
+      (address) => address.id === evt.data.primary_email_address_id
+    );
+    const fallbackEmail = email_addresses[0];
+    const email = primaryEmail?.email_address || fallbackEmail?.email_address;
+
+    if (!email) {
+      console.error(
+        "[CLERK_WEBHOOK] user event missing email address",
+        JSON.stringify(evt.data)
+      );
+      return new Response("Missing email", { status: 400 });
+    }
+
+    const fullName =
+      first_name || last_name ? `${first_name ?? ""} ${last_name ?? ""}`.trim() : null;
     try {
       const newUser = await prisma.user.upsert({
         where: { email },
         update: {
           clerkId: id,
-          name: first_name,
+          name: fullName,
           imageUrl: image_url,
         },
         create: {
           clerkId: id,
           email,
-          name: first_name,
+          name: fullName,
           imageUrl: image_url,
         },
       });
