@@ -1,14 +1,16 @@
 import { StaticStatsCounter } from "@/components/StaticStatsCounter";
+import { Badge } from "@/components/ui/badge";
 import prisma from "@/lib/db";
 import { PublicStats } from "@/types";
 import {
   ArrowRight,
   CheckCircle,
+  ClipboardCheck,
   Clock,
+  LayoutDashboard,
   Star,
-  Target,
   Users,
-  Zap,
+  Video,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -27,7 +29,7 @@ async function getPublicStats(): Promise<PublicStats> {
         }),
         prisma.room.count(),
         prisma.user.count(),
-      ]
+      ],
     );
 
     const stats = {
@@ -50,8 +52,13 @@ async function getPublicStats(): Promise<PublicStats> {
 
 export default async function LandingPage() {
   const stats = await getPublicStats();
+  const previewTasks = [
+    { title: "数学演習まとめ", status: "進行中", pomos: "2 / 4" },
+    { title: "企画レビュー", status: "Todo", pomos: "0 / 3" },
+    { title: "録画アップロード", status: "完了", pomos: "1 / 1" },
+  ];
   return (
-    <div className="flex min-h-screen flex-col bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+    <div className="flex min-h-screen flex-col bg-stone-50">
       <header className="border-b border-border/50 bg-white/80 backdrop-blur-lg sticky top-0 z-50">
         <div className="container mx-auto flex h-16 items-center px-4 sm:px-6 lg:px-8">
           <div className="flex items-center space-x-3">
@@ -88,52 +95,188 @@ export default async function LandingPage() {
       </header>
 
       <main className="flex-1">
-        <section className="relative py-20 md:py-32 overflow-hidden">
-          <div className="absolute inset-0 -z-10">
-            <div className="absolute top-0 left-1/4 w-72 h-72 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob"></div>
-            <div className="absolute top-0 right-1/4 w-72 h-72 bg-indigo-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-2000"></div>
-            <div className="absolute bottom-8 left-1/3 w-72 h-72 bg-pink-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-4000"></div>
-          </div>
-
+        <section className="py-16 md:py-24">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="mx-auto max-w-4xl text-center">
-              <div className="inline-flex items-center px-4 py-2 bg-white/80 backdrop-blur rounded-full border border-indigo-200 mb-8">
-                <Star className="h-4 w-4 text-yellow-500 mr-2" />
-                <span className="text-sm font-medium text-gray-700">
-                  共同作業で集中力を最大化
-                </span>
+            <div className="grid items-center gap-12 lg:grid-cols-2">
+              <div className="space-y-8">
+                <div className="space-y-4 text-left">
+                  <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">
+                    TEAM FOCUSED PRODUCTIVITY
+                  </p>
+                  <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl text-slate-900">
+                    チームの集中習慣を
+                    <span className="block text-indigo-600">
+                      設計して、記録して、共有する
+                    </span>
+                  </h1>
+                  <p className="text-lg text-slate-600 md:text-xl leading-relaxed">
+                    PomoLinkは招待制ルームでポモドーロとタスクをまとめ、録画つきタイマーやポイント配布、
+                    ダッシュボードでの振り返りまで一体化したチーム向けプロダクティビティ体験を提供します。
+                  </p>
+                </div>
+
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                  <div className="flex flex-col gap-4 sm:flex-row">
+                    <Link
+                      href="/sign-up"
+                      className="group inline-flex items-center justify-center rounded-xl bg-indigo-600 px-8 py-4 text-lg font-medium text-white shadow-lg hover:bg-indigo-700 transition-all"
+                    >
+                      無料ではじめる
+                      <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                    </Link>
+                    <Link
+                      href="#features"
+                      className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-8 py-4 text-lg font-medium text-slate-800 hover:bg-slate-50 transition-all"
+                    >
+                      機能を見る
+                    </Link>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 pt-4 sm:grid-cols-2">
+                  <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                    <p className="text-sm text-slate-500">今日の記録</p>
+                    <p className="mt-2 text-3xl font-semibold text-slate-900">
+                      4/6 ポモドーロ
+                    </p>
+                    <p className="text-sm text-slate-500">
+                      朝会ルームで 3 人が集中しています
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                    <p className="text-sm text-slate-500">最新のポイント</p>
+                    <p className="mt-2 text-3xl font-semibold text-slate-900">
+                      +35 pt
+                    </p>
+                    <p className="text-sm text-slate-500">
+                      プランナーからレビュー達成に付与
+                    </p>
+                  </div>
+                </div>
+
+                <div className="border-t border-dashed border-slate-200 pt-8">
+                  <StaticStatsCounter initialStats={stats} />
+                </div>
               </div>
 
-              <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl mb-6">
-                <span className="block">集中力を</span>
-                <span className="block bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent">
-                  共有し、成長を加速
-                </span>
-              </h1>
+              <div className="relative w-full">
+                <div className="absolute -inset-6 -z-10 rounded-[32px] bg-gradient-to-br from-indigo-100 to-purple-100 blur-3xl" />
+                <div className="rounded-[32px] border border-slate-100 bg-white p-6 shadow-2xl shadow-indigo-100/70 space-y-5">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-xs uppercase text-slate-400 tracking-[0.3em]">
+                        ROOM
+                      </p>
+                      <p className="text-xl font-semibold text-slate-900">
+                        夜ふかしラボ
+                      </p>
+                      <p className="text-sm text-slate-500">
+                        今日 4/6 ポモドーロ
+                      </p>
+                    </div>
+                    <Badge
+                      variant="outline"
+                      className="border-emerald-200 bg-emerald-50 text-emerald-700"
+                    >
+                      集中タイム
+                    </Badge>
+                  </div>
 
-              <p className="mt-6 text-lg text-gray-600 md:text-xl max-w-3xl mx-auto leading-relaxed">
-                PomoLinkは共有できるポモドーロタイマーで、チームでの学習やタスク管理をより効率的に、
-                そして楽しくサポートします。一緒に集中し、一緒に成長しましょう。
-              </p>
+                  <div className="rounded-2xl border border-slate-100 bg-slate-50 p-5 space-y-4">
+                    <div className="flex items-end justify-between">
+                      <div>
+                        <p className="text-sm text-slate-500">
+                          進行中のセッション
+                        </p>
+                        <p className="text-4xl font-bold text-slate-900">
+                          17:32
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm text-slate-500">休憩まで</p>
+                        <p className="text-lg font-semibold text-slate-900">
+                          07:28
+                        </p>
+                      </div>
+                    </div>
+                    <div className="h-2 rounded-full bg-white">
+                      <div className="h-full w-3/4 rounded-full bg-indigo-500" />
+                    </div>
+                    <div className="flex items-center justify-between text-sm text-slate-500">
+                      <span>25分 / 5分</span>
+                      <span>録画オン</span>
+                    </div>
+                  </div>
 
-              <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
-                <Link
-                  href="/sign-up"
-                  className="group inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 px-8 py-4 text-lg font-medium text-white shadow-lg hover:shadow-xl transition-all hover-lift"
-                >
-                  無料ではじめる
-                  <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                </Link>
-                <Link
-                  href="#features"
-                  className="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-8 py-4 text-lg font-medium text-gray-700 hover:bg-gray-50 transition-all hover-lift"
-                >
-                  機能を見る
-                </Link>
-              </div>
-
-              <div className="mt-16">
-                <StaticStatsCounter initialStats={stats} />
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="rounded-2xl border border-slate-100 bg-white p-4">
+                      <p className="text-xs uppercase tracking-[0.3em] text-slate-400 mb-3">
+                        TASKS
+                      </p>
+                      <div className="space-y-3">
+                        {previewTasks.map((task) => (
+                          <div
+                            key={task.title}
+                            className="flex items-start justify-between"
+                          >
+                            <div>
+                              <p className="text-sm font-medium text-slate-900">
+                                {task.title}
+                              </p>
+                              <p className="text-xs text-slate-500">
+                                {task.status}
+                              </p>
+                            </div>
+                            <span className="text-xs font-semibold text-slate-500">
+                              {task.pomos}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="rounded-2xl border border-slate-100 bg-white p-4">
+                      <p className="text-xs uppercase tracking-[0.3em] text-slate-400 mb-3">
+                        MEMBERS
+                      </p>
+                      <div className="space-y-3">
+                        {[
+                          {
+                            name: "Rina",
+                            role: "Planner",
+                            status: "タイマー管理中",
+                          },
+                          {
+                            name: "Kaito",
+                            role: "Performer",
+                            status: "+10 pt 付与",
+                          },
+                          {
+                            name: "Sora",
+                            role: "Performer",
+                            status: "録画アップ中",
+                          },
+                        ].map((member) => (
+                          <div
+                            key={member.name}
+                            className="flex items-center justify-between"
+                          >
+                            <div>
+                              <p className="text-sm font-medium text-slate-900">
+                                {member.name}
+                              </p>
+                              <p className="text-xs text-slate-500">
+                                {member.status}
+                              </p>
+                            </div>
+                            <span className="rounded-full border border-slate-200 px-2 py-0.5 text-xs text-slate-600">
+                              {member.role}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -143,10 +286,10 @@ export default async function LandingPage() {
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-16">
               <h2 className="text-3xl font-bold tracking-tight sm:text-4xl mb-4">
-                なぜPomoLinkなのか？
+                現場のチーム運用に必要なものを一つに
               </h2>
               <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                従来のポモドーロタイマーの枠を超えた、チーム協働型の集中管理ツール
+                ルーム管理からタスク、録画、ポイントまで同じワークスペースで完結します
               </p>
             </div>
 
@@ -154,44 +297,44 @@ export default async function LandingPage() {
               {[
                 {
                   icon: Users,
-                  title: "チーム同期",
+                  title: "招待制ルーム",
                   description:
-                    "仲間と一緒にポモドーロを実行し、お互いのモチベーションを高め合います",
+                    "プランナーがルームを作成し、メンバーを招待。タスクやポイント運用を役割ごとに整理できます",
                   gradient: "from-blue-500 to-cyan-500",
                 },
                 {
-                  icon: Target,
-                  title: "タスク管理",
+                  icon: ClipboardCheck,
+                  title: "タスクとワークフロー",
                   description:
-                    "ポモドーロと連携したタスク管理で、効率的に目標を達成できます",
+                    "ルーム内でタスクを作成し、優先度やステータスを更新。進行状況を全員で共有できます",
                   gradient: "from-green-500 to-emerald-500",
                 },
                 {
-                  icon: Zap,
-                  title: "リアルタイム",
+                  icon: Video,
+                  title: "録画つきタイマー",
                   description:
-                    "チームメンバーの集中状況をリアルタイムで共有し、同期を保ちます",
+                    "カメラ録画をオンにしたポモドーロセッションを保存し、必要に応じて動画で振り返れます",
                   gradient: "from-yellow-500 to-orange-500",
                 },
                 {
-                  icon: CheckCircle,
-                  title: "進捗追跡",
+                  icon: LayoutDashboard,
+                  title: "進捗ダッシュボード",
                   description:
-                    "詳細な統計とレポートで、個人とチームの成長を可視化します",
+                    "ポモドーロ数・完了タスク・アクティビティをダッシュボードで確認し、チームの歩みを把握できます",
                   gradient: "from-purple-500 to-pink-500",
                 },
                 {
                   icon: Clock,
-                  title: "柔軟な設定",
+                  title: "柔軟なタイマー設定",
                   description:
-                    "チームに合わせてポモドーロの時間や休憩時間をカスタマイズできます",
+                    "タスクごとに作業/休憩の長さを変更し、チームのワークスタイルに合わせた集中サイクルを作れます",
                   gradient: "from-indigo-500 to-blue-500",
                 },
                 {
                   icon: Star,
-                  title: "ポイント制",
+                  title: "ポイント運用",
                   description:
-                    "ゲーミフィケーション要素でモチベーションを維持し、継続しやすくします",
+                    "プランナーがメンバーへポイントを付与し、履歴でモチベーションを共有できます",
                   gradient: "from-red-500 to-pink-500",
                 },
               ].map((feature, index) => (
@@ -215,21 +358,82 @@ export default async function LandingPage() {
           </div>
         </section>
 
-        <section className="py-20 bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <h2 className="text-3xl font-bold text-white mb-6">
-              今すぐチームの生産性を向上させませんか？
-            </h2>
-            <p className="text-xl text-indigo-100 mb-8 max-w-2xl mx-auto">
-              無料でアカウントを作成し、チームメンバーと一緒に集中力を高めましょう
-            </p>
-            <Link
-              href="/sign-up"
-              className="inline-flex items-center justify-center rounded-xl bg-white px-8 py-4 text-lg font-medium text-indigo-600 shadow-lg hover:shadow-xl transition-all hover-lift hover:scale-105"
-            >
-              無料で始める
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Link>
+        <section className="py-16 bg-stone-100">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="rounded-[32px] border border-slate-200 bg-white px-8 py-12 shadow-xl shadow-indigo-100/50">
+              <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
+                <div className="text-left">
+                  <p className="text-sm font-semibold tracking-[0.3em] text-slate-500">
+                    NEXT ACTION
+                  </p>
+                  <h2 className="mt-4 text-3xl font-bold text-slate-900 leading-tight">
+                    今日のルームをつくって、
+                    <br className="hidden lg:block" />
+                    集中の流れを整えましょう
+                  </h2>
+                  <p className="mt-4 text-lg text-slate-600">
+                    無料プランから始めて、タスク・ポイント・録画のワークフローをそのまま体験できます。
+                    チームの週次リズムに合わせていつでもアップグレード可能です。
+                  </p>
+                  <ul className="mt-6 space-y-3">
+                    {[
+                      "招待制ルームで参加者を管理",
+                      "録画オン/オフを切り替えながらポモドーロ実行",
+                      "ダッシュボードとポイントで振り返り",
+                    ].map((item) => (
+                      <li
+                        key={item}
+                        className="flex items-start gap-3 text-slate-700"
+                      >
+                        <CheckCircle className="h-5 w-5 text-emerald-500 mt-0.5" />
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="flex flex-col gap-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-slate-500">次のセッション</p>
+                      <p className="text-2xl font-semibold text-slate-900">
+                        20:30 スタート
+                      </p>
+                    </div>
+                    <span className="rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-600">
+                      ルーム: 夜ふかしラボ
+                    </span>
+                  </div>
+                  <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-2">
+                    <div className="flex items-center justify-between text-sm text-slate-600">
+                      <span>Planner</span>
+                      <span className="font-semibold text-slate-900">Rina</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm text-slate-600">
+                      <span>Performer</span>
+                      <span className="font-semibold text-slate-900">
+                        Kaito, Sora
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm text-slate-600">
+                      <span>録画設定</span>
+                      <span className="font-semibold text-emerald-600">
+                        オン
+                      </span>
+                    </div>
+                  </div>
+                  <Link
+                    href="/sign-up"
+                    className="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-8 py-4 text-lg font-medium text-white shadow-lg hover:bg-indigo-700 transition-all"
+                  >
+                    無料ではじめる
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </Link>
+                  <p className="text-center text-sm text-slate-500">
+                    クレジットカード不要・いつでもキャンセル可能
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
       </main>
