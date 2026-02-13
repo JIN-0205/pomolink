@@ -80,7 +80,7 @@ export default async function LandingPage() {
           <div className="ml-auto flex space-x-4">
             <Link
               href="/sign-in"
-              className="inline-flex items-center justify-center rounded-lg border border-transparent bg-gradient-to-r from-indigo-500 to-purple-500 px-5 py-2 text-sm font-medium text-white shadow-sm hover:shadow-lg transition-all hover-lift"
+              className="inline-flex items-center justify-center rounded-lg border border-transparent bg-indigo-600  px-5 py-2 text-sm font-medium text-white shadow-sm hover:shadow-lg transition-all hover-lift"
             >
               ログイン
             </Link>
@@ -121,7 +121,7 @@ export default async function LandingPage() {
                       href="/sign-up"
                       className="group inline-flex items-center justify-center rounded-xl bg-indigo-600 px-8 py-4 text-lg font-medium text-white shadow-lg hover:bg-indigo-700 transition-all"
                     >
-                      無料ではじめる
+                      今すぐはじめる
                       <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                     </Link>
                     <Link
@@ -425,7 +425,7 @@ export default async function LandingPage() {
                     href="/sign-up"
                     className="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-8 py-4 text-lg font-medium text-white shadow-lg hover:bg-indigo-700 transition-all"
                   >
-                    無料ではじめる
+                    今すぐはじめる
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </Link>
                   <p className="text-center text-sm text-slate-500">

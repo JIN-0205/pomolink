@@ -22,13 +22,13 @@ import { useUser } from "@clerk/nextjs";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import {
-  AlertCircle,
   Calendar,
   CheckCircle,
   Clock,
+  ListTodo,
+  Loader,
   Play,
   Search,
-  Target,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -86,7 +86,7 @@ export default function TasksPage() {
               console.error(`ルーム ${room.name} のタスク取得エラー:`, error);
               return { ...room, tasks: [] };
             }
-          })
+          }),
         );
 
         setRooms(roomsWithTasks);
@@ -150,7 +150,7 @@ export default function TasksPage() {
       case "TODO":
         return <Clock className="h-4 w-4 text-gray-500" />;
       case "IN_PROGRESS":
-        return <AlertCircle className="h-4 w-4 text-yellow-500" />;
+        return <Loader className="h-4 w-4 text-yellow-500" />;
       case "COMPLETED":
         return <CheckCircle className="h-4 w-4 text-green-500" />;
       default:
@@ -208,7 +208,7 @@ export default function TasksPage() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
-              <Target className="h-5 w-5 text-blue-500" />
+              <ListTodo className="h-5 w-5 text-blue-500" />
               <div>
                 <p className="text-sm text-muted-foreground">総タスク数</p>
                 <p className="text-2xl font-bold">{stats.total}</p>
@@ -232,7 +232,7 @@ export default function TasksPage() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
-              <AlertCircle className="h-5 w-5 text-yellow-500" />
+              <Loader className="h-5 w-5 text-yellow-500" />
               <div>
                 <p className="text-sm text-muted-foreground">進行中</p>
                 <p className="text-2xl font-bold">{stats.inProgress}</p>
@@ -294,7 +294,7 @@ export default function TasksPage() {
       {rooms.length === 0 ? (
         <Card>
           <CardContent className="p-8 text-center">
-            <Target className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <ListTodo className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-medium mb-2">タスクがありません</h3>
             <p className="text-muted-foreground">
               パフォーマーとして参加しているルームがないか、
@@ -383,7 +383,7 @@ export default function TasksPage() {
                                       {format(
                                         new Date(task.dueDate),
                                         "yyyy/MM/dd",
-                                        { locale: ja }
+                                        { locale: ja },
                                       )}
                                     </span>
                                   </div>

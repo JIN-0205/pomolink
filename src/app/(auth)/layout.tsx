@@ -1,6 +1,3 @@
-import Image from "next/image";
-import Link from "next/link";
-
 export default function AuthLayout({
   children,
 }: {
@@ -8,7 +5,7 @@ export default function AuthLayout({
 }) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
+      {/* <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="flex flex-col items-center space-y-4">
           <Link href="/" className="group">
             <div className="flex items-center space-x-3 transition-transform group-hover:scale-105">
@@ -33,19 +30,19 @@ export default function AuthLayout({
             集中力を高め、目標を達成するためのポモドーロタイマーアプリ
           </p>
         </div>
-      </div>
+      </div> */}
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white/80 backdrop-blur-sm px-6 py-8 shadow-xl ring-1 ring-gray-200/50 sm:rounded-2xl sm:px-10 border-0">
-          {children}
-        </div>
-      </div>
+      {/* <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md"> */}
+      {/* <div className="bg-white/80 backdrop-blur-sm px-6 py-8 shadow-xl ring-1 ring-gray-200/50 sm:rounded-2xl sm:px-10 border-0"> */}
+      {children}
+      {/* </div> */}
+      {/* </div> */}
 
-      <div className="mt-8 text-center">
+      {/* <div className="mt-8 text-center">
         <p className="text-xs text-gray-500">
           © 2025 PomoLink. All rights reserved.
         </p>
-      </div>
+      </div> */}
     </div>
   );
 }

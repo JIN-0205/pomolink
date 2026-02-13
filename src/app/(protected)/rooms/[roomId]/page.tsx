@@ -24,10 +24,10 @@ import { useUser } from "@clerk/nextjs";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import {
-  AlertCircle,
   CheckCircle,
   ChevronRight,
   Clock,
+  Loader,
   LogOut,
   PlusCircle,
   Settings,
@@ -176,7 +176,7 @@ export default function RoomPage() {
   }
 
   const currentUserParticipant = room.participants.find(
-    (p) => p.userId === currentUserDbId
+    (p) => p.userId === currentUserDbId,
   );
   const isCreator = room.creatorId === currentUserDbId;
   const isPlanner = currentUserParticipant?.role === "PLANNER" || isCreator;
@@ -184,7 +184,7 @@ export default function RoomPage() {
   const completedTasks = tasks.filter((t) => t.status === "COMPLETED").length;
   const totalCompletedPomos = tasks.reduce(
     (sum, task) => sum + (task.completedPomos || 0),
-    0
+    0,
   );
 
   return (
@@ -400,7 +400,7 @@ export default function RoomPage() {
                         StatusIcon = CheckCircle;
                         statusText = "完了";
                       } else if (task.status === "IN_PROGRESS") {
-                        StatusIcon = AlertCircle;
+                        StatusIcon = Loader;
                         statusText = "進行中";
                       }
 

@@ -107,7 +107,7 @@ export function CreateRoomForm() {
   return (
     <div className="space-y-8">
       <div className="text-center pb-6 border-b border-gray-100">
-        <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+        <div className="w-16 h-16 mx-auto mb-4 bg-indigo-600 rounded-full flex items-center justify-center">
           <Users className="w-8 h-8 text-white" />
         </div>
         <h2 className="text-xl font-semibold text-gray-900">ルーム設定</h2>
@@ -229,7 +229,7 @@ export function CreateRoomForm() {
             <Button
               type="submit"
               disabled={isSubmitting}
-              className="px-8 py-3 h-auto bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-all duration-200"
+              className="px-8 py-3 h-auto bg-indigo-600 hover:bg-indigo-700 transition-all duration-200"
             >
               {isSubmitting && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

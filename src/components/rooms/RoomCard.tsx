@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 import { Room } from "@/types";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
-import { ChevronRight, Clock, Crown, Target, Users, Zap } from "lucide-react";
+import { ChevronRight, Clock, Crown, ListTodo, Users, Zap } from "lucide-react";
 import Link from "next/link";
 
 interface RoomCardProps {
@@ -34,7 +34,7 @@ export function RoomCard({
         className={cn(
           "h-full overflow-hidden transition-all duration-300 hover-lift border-0 shadow-md",
           "bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-900 dark:to-gray-800/50",
-          "group-hover:shadow-xl group-hover:scale-[1.02] py-0 rounded-r-xs"
+          "group-hover:shadow-xl group-hover:scale-[1.02] py-0 rounded-r-xs",
         )}
       >
         {/* カードヘッダー */}
@@ -46,7 +46,7 @@ export function RoomCard({
               isPlanner
                 ? "bg-gradient-to-r from-indigo-200 to-indigo-500"
                 : // ? "bg-gradient-to-r from-indigo-500 to-purple-500"
-                  "bg-gradient-to-r from-green-200 to-green-500"
+                  "bg-gradient-to-r from-green-200 to-green-500",
             )}
           />
 
@@ -68,7 +68,7 @@ export function RoomCard({
                     "text-xs font-semibold",
                     isPlanner
                       ? "bg-indigo-100 text-indigo-700 border-indigo-200 dark:bg-indigo-900/50 dark:text-indigo-300"
-                      : "bg-green-100 text-green-700 border-green-200 dark:bg-green-900/50 dark:text-green-300"
+                      : "bg-green-100 text-green-700 border-green-200 dark:bg-green-900/50 dark:text-green-300",
                   )}
                 >
                   {isPlanner ? (
@@ -108,7 +108,7 @@ export function RoomCard({
 
             <div className="flex items-center p-3 bg-gray-100 dark:bg-gray-800/50 rounded-lg">
               <div className="p-2 bg-green-100 dark:bg-green-900/50 rounded-full mr-3">
-                <Target className="h-4 w-4 text-green-600 dark:text-green-400" />
+                <ListTodo className="h-4 w-4 text-green-600 dark:text-green-400" />
               </div>
               <div>
                 <div className="text-lg font-bold text-gray-900 dark:text-gray-100">

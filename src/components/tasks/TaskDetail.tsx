@@ -49,7 +49,7 @@ const TaskDetail = ({ task, sessions, isPlanner, room }: TaskDetailProps) => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedImageIndex, setSelectedImageIndex] = useState<number>(0);
   const [selectedImageGroup, setSelectedImageGroup] = useState<UploadType[]>(
-    []
+    [],
   );
   const [api, setApi] = useState<CarouselApi | null>(null);
   const [count, setCount] = useState(0);
@@ -63,9 +63,15 @@ const TaskDetail = ({ task, sessions, isPlanner, room }: TaskDetailProps) => {
 
   const { data, mutate } = useSWR<{ uploads: UploadType[] }>(
     `/api/tasks/${task.id}/upload`,
-    fetcher
+    fetcher,
   );
-  const uploads = useMemo(() => data?.uploads ?? [], [data]);
+  const uploads = useMemo(
+    () =>
+      (data?.uploads ?? []).filter(
+        (upload) => typeof upload.fileUrl === "string" && upload.fileUrl.trim()
+      ),
+    [data]
+  );
 
   const groupedByDate = useMemo(() => {
     const uploadsByDate: Record<string, UploadType[]> = uploads.reduce(
@@ -75,7 +81,7 @@ const TaskDetail = ({ task, sessions, isPlanner, room }: TaskDetailProps) => {
         acc[date].push(upload);
         return acc;
       },
-      {} as Record<string, UploadType[]>
+      {} as Record<string, UploadType[]>,
     );
     const sessionsByDate: Record<string, Session[]> = sessions.reduce(
       (acc, session) => {
@@ -84,11 +90,11 @@ const TaskDetail = ({ task, sessions, isPlanner, room }: TaskDetailProps) => {
         acc[date].push(session);
         return acc;
       },
-      {} as Record<string, Session[]>
+      {} as Record<string, Session[]>,
     );
 
     const allDates = Array.from(
-      new Set([...Object.keys(uploadsByDate), ...Object.keys(sessionsByDate)])
+      new Set([...Object.keys(uploadsByDate), ...Object.keys(sessionsByDate)]),
     );
     allDates.sort((a, b) => b.localeCompare(a));
 
@@ -115,7 +121,7 @@ const TaskDetail = ({ task, sessions, isPlanner, room }: TaskDetailProps) => {
       setSelectedImageIndex(idx >= 0 ? idx : 0);
       setSelectedImageGroup(uploads);
     },
-    []
+    [],
   );
 
   useEffect(() => {
@@ -232,7 +238,7 @@ const TaskDetail = ({ task, sessions, isPlanner, room }: TaskDetailProps) => {
                   (current) => ({
                     uploads: [...(current?.uploads ?? []), ...newUploads],
                   }),
-                  false
+                  false,
                 );
                 mutate();
               }}
@@ -306,7 +312,7 @@ const TaskDetail = ({ task, sessions, isPlanner, room }: TaskDetailProps) => {
                                   )}
                                   <div className="text-xs text-muted-foreground">
                                     {new Date(
-                                      upload.createdAt
+                                      upload.createdAt,
                                     ).toLocaleTimeString()}
                                   </div>
                                 </div>
@@ -335,14 +341,14 @@ const TaskDetail = ({ task, sessions, isPlanner, room }: TaskDetailProps) => {
                                     <span>
                                       開始:{" "}
                                       {new Date(
-                                        session.startTime
+                                        session.startTime,
                                       ).toLocaleTimeString()}
                                     </span>
                                     {session.endTime && (
                                       <span>
                                         終了:{" "}
                                         {new Date(
-                                          session.endTime
+                                          session.endTime,
                                         ).toLocaleTimeString()}
                                       </span>
                                     )}
@@ -357,7 +363,7 @@ const TaskDetail = ({ task, sessions, isPlanner, room }: TaskDetailProps) => {
                                     </div>
                                     {session.recordingDuration && (
                                       <div className="ml-2 text-xs text-muted-foreground">
-                                        {session.recordingDuration}min
+                                        {session.recordingDuration}秒
                                       </div>
                                     )}
                                   </div>

@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { playTimerSound, type AlarmPreset } from "@/lib/audio";
 import { cn } from "@/lib/utils";
-import { Target, Zap } from "lucide-react";
+import { Coffee, Zap } from "lucide-react";
 import { useEffect, useRef } from "react";
 
 interface EnhancedTimerDisplayProps {
@@ -147,7 +147,7 @@ export default function EnhancedTimerDisplay({
         isWorkTimer
           ? "bg-gradient-to-br from-indigo-50 via-indigo-100 to-indigo-200 dark:from-indigo-950/20 dark:via-indigo-900/30 dark:to-indigo-800/40"
           : "bg-gradient-to-br from-green-50 via-green-100 to-green-200 dark:from-green-950/20 dark:via-green-900/30 dark:to-green-800/40",
-        timerState === "running" && timeLeft < 11 && "animate-timer-pulse"
+        timerState === "running" && timeLeft < 11 && "animate-timer-pulse",
       )}
     >
       {/* 背景パターン */}
@@ -164,7 +164,7 @@ export default function EnhancedTimerDisplay({
               "px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-semibold",
               isWorkTimer
                 ? "bg-indigo-100 text-indigo-800 border-indigo-200 dark:bg-indigo-900/50 dark:text-indigo-200"
-                : "bg-green-100 text-green-800 border-green-200 dark:bg-green-900/50 dark:text-green-200"
+                : "bg-green-100 text-green-800 border-green-200 dark:bg-green-900/50 dark:text-green-200",
             )}
           >
             {isWorkTimer ? (
@@ -174,7 +174,7 @@ export default function EnhancedTimerDisplay({
               </>
             ) : (
               <>
-                <Target className="mr-1.5 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                <Coffee className="mr-1.5 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
                 休憩時間
               </>
             )}
@@ -213,7 +213,7 @@ export default function EnhancedTimerDisplay({
                   "transition-all duration-1000 ease-out",
                   isWorkTimer
                     ? "text-indigo-500 dark:text-indigo-400"
-                    : "text-green-500 dark:text-green-400"
+                    : "text-green-500 dark:text-green-400",
                 )}
                 strokeLinecap="round"
               />
@@ -226,7 +226,7 @@ export default function EnhancedTimerDisplay({
                   "text-3xl sm:text-4xl lg:text-5xl font-mono font-bold",
                   isWorkTimer
                     ? "text-indigo-700 dark:text-indigo-300"
-                    : "text-green-700 dark:text-green-300"
+                    : "text-green-700 dark:text-green-300",
                 )}
               >
                 {formatTime(timeLeft)}
@@ -250,7 +250,7 @@ export default function EnhancedTimerDisplay({
                       ? isWorkTimer
                         ? "bg-indigo-300 ring-2 ring-indigo-500"
                         : "bg-green-300 ring-2 ring-green-500"
-                      : "bg-gray-200 dark:bg-gray-600"
+                      : "bg-gray-200 dark:bg-gray-600",
                 )}
               />
             ))}

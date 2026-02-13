@@ -1,0 +1,12 @@
+[
+  {
+    "origin": [
+      "https://www.pomolink.net",
+      "https://pomolink-klvfug7my-jin-nakanos-projects.vercel.app",
+      "http://localhost:3000"
+    ],
+    "method": ["GET", "HEAD", "OPTIONS"],
+    "responseHeader": ["Content-Type"],
+    "maxAgeSeconds": 3600
+  }
+]

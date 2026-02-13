@@ -3,7 +3,6 @@
 import { cn } from "@/lib/utils";
 import { SignOutButton, useAuth, UserButton } from "@clerk/nextjs";
 import {
-  Clock,
   Coins,
   Home,
   ListTodo,
@@ -79,7 +78,7 @@ export default function ProtectedLayout({
   if (!isLoaded || !isSignedIn || !userId) {
     return (
       <div className="flex items-center justify-center h-screen bg-gradient-to-br from-indigo-50 to-purple-50">
-        <div className="text-center p-8 rounded-2xl bg-white shadow-xl">
+        {/* <div className="text-center p-8 rounded-2xl bg-white shadow-xl">
           <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full flex items-center justify-center">
             <Clock className="h-8 w-8 text-white" />
           </div>
@@ -95,7 +94,7 @@ export default function ProtectedLayout({
           >
             サインイン
           </button>
-        </div>
+        </div> */}
       </div>
     );
   }
@@ -139,20 +138,30 @@ export default function ProtectedLayout({
           <div className="flex-1 flex flex-col justify-between py-4">
             <nav className="flex-1 px-4 space-y-2">
               {routes.map((route) => (
+                // <Link
+                //   key={route.href}
+                //   href={route.href}
+                //   className={cn(
+                //     "flex items-center gap-3 rounded-xl py-3 px-4 text-sm font-medium transition-all hover-lift",
+                //     route.active
+                //       ? "bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-md"
+                //       : "hover:bg-gray-100 text-gray-700 hover:text-gray-900"
+                //   )}
+                // >
                 <Link
                   key={route.href}
                   href={route.href}
                   className={cn(
-                    "flex items-center gap-3 rounded-xl py-3 px-4 text-sm font-medium transition-all hover-lift",
+                    "flex items-center gap-3 rounded-xl py-3 px-4 text-sm font-medium transition-all duration-200", // hover-liftもナビゲーションには少し過剰かもしれません
                     route.active
-                      ? "bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-md"
-                      : "hover:bg-gray-100 text-gray-700 hover:text-gray-900"
+                      ? "bg-indigo-500 text-white" // モダンで落ち着いたスタイル
+                      : "text-gray-600 hover:bg-gray-100 hover:text-gray-900",
                   )}
                 >
                   <route.icon
                     className={cn(
                       "h-5 w-5",
-                      route.active ? "text-white" : "text-gray-500"
+                      route.active ? "text-white" : "text-gray-500",
                     )}
                   />
                   {route.label}
@@ -184,13 +193,13 @@ export default function ProtectedLayout({
       <div
         className={cn(
           "lg:hidden fixed inset-0 z-30 bg-black/20 backdrop-blur-sm transition-opacity",
-          isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+          isOpen ? "opacity-100" : "opacity-0 pointer-events-none",
         )}
       >
         <div
           className={cn(
             "fixed inset-y-0 left-0 z-40 w-72 bg-white shadow-2xl transform transition-transform",
-            isOpen ? "translate-x-0" : "-translate-x-full"
+            isOpen ? "translate-x-0" : "-translate-x-full",
           )}
         >
           <div className="h-full flex flex-col">
@@ -222,13 +231,13 @@ export default function ProtectedLayout({
                       "flex items-center gap-3 rounded-xl py-3 px-4 text-sm font-medium transition-all",
                       route.active
                         ? "bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-md"
-                        : "hover:bg-gray-100 text-gray-700 hover:text-gray-900"
+                        : "hover:bg-gray-100 text-gray-700 hover:text-gray-900",
                     )}
                   >
                     <route.icon
                       className={cn(
                         "h-5 w-5",
-                        route.active ? "text-white" : "text-gray-500"
+                        route.active ? "text-white" : "text-gray-500",
                       )}
                     />
                     {route.label}

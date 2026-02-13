@@ -80,7 +80,7 @@ const fetchRoomPerformers = async (roomId: string): Promise<User[]> => {
 };
 
 const fetchUserPointHistories = async (
-  userId: string
+  userId: string,
 ): Promise<PointHistory[]> => {
   const res = await fetch(`/api/points/user/${userId}`);
   if (!res.ok) return [];
@@ -89,7 +89,7 @@ const fetchUserPointHistories = async (
 };
 
 const fetchSelfHistoriesByRoom = async (
-  roomId: string
+  roomId: string,
 ): Promise<PointHistory[]> => {
   const res = await fetch(`/api/points/self?roomId=${roomId}`);
   if (!res.ok) return [];
@@ -102,7 +102,7 @@ const PointsPage = () => {
 
   const [plannerRooms, setPlannerRooms] = useState<Room[]>([]);
   const [roomPerformers, setRoomPerformers] = useState<Record<string, User[]>>(
-    {}
+    {},
   );
   const [performerHistories, setPerformerHistories] = useState<{
     [userId: string]: PointHistory[];
@@ -201,7 +201,7 @@ const PointsPage = () => {
 
       if (selectedPerformer) {
         const updatedHistories = await fetchUserPointHistories(
-          selectedPerformer.id
+          selectedPerformer.id,
         );
         setPerformerHistories((prev) => ({
           ...prev,
@@ -267,14 +267,32 @@ const PointsPage = () => {
                   <Card key={room.id}>
                     <CardHeader>
                       <CardTitle className="flex items-center justify-between">
-                        <span>{room.name}</span>
-                        <span className="text-lg font-bold">
+                        <span className="text-xl">{room.name}</span>
+                        {/* <span className="text-lg font-bold">
                           {performerRoomHistories[room.id]
                             ? `${calculateTotalPoints(
-                                performerRoomHistories[room.id]
+                                performerRoomHistories[room.id],
                               )} ポイント`
                             : "計算中..."}
-                        </span>
+                        </span> */}
+                        <div className="flex items-baseline gap-1">
+                          {performerRoomHistories[room.id] ? (
+                            <>
+                              <span className="text-4xl font-extrabold tracking-tight text-success">
+                                {calculateTotalPoints(
+                                  performerRoomHistories[room.id],
+                                )}
+                              </span>
+                              <span className="text-sm font-medium text-gray-500">
+                                ポイント
+                              </span>
+                            </>
+                          ) : (
+                            <span className="text-sm text-gray-400 animate-pulse">
+                              計算中...
+                            </span>
+                          )}
+                        </div>
                       </CardTitle>
                       <CardDescription>{room.description}</CardDescription>
                     </CardHeader>
@@ -303,11 +321,11 @@ const PointsPage = () => {
                                   )}
                                   <p className="text-xs text-muted-foreground">
                                     {new Date(
-                                      history.createdAt
+                                      history.createdAt,
                                     ).toLocaleDateString()}
                                   </p>
                                 </div>
-                                <div className="text-lg font-bold">
+                                <div className="text-xl font-bold text-success">
                                   +{history.points}
                                 </div>
                               </div>
@@ -473,7 +491,7 @@ const PointsPage = () => {
                                   <span className="text-sm text-muted-foreground">
                                     {performerHistories[performer.id]
                                       ? `${calculateTotalPoints(
-                                          performerHistories[performer.id]
+                                          performerHistories[performer.id],
                                         )} ポイント`
                                       : "履歴を表示"}
                                   </span>
@@ -506,7 +524,7 @@ const PointsPage = () => {
                                             )}
                                             <p className="text-xs text-muted-foreground">
                                               {new Date(
-                                                history.createdAt
+                                                history.createdAt,
                                               ).toLocaleDateString()}
                                             </p>
                                           </div>

@@ -10,7 +10,6 @@ import {
   CheckCircle,
   Clock,
   PlayCircle,
-  Target,
   TrendingUp,
   Users,
 } from "lucide-react";
@@ -43,7 +42,7 @@ export default function DashboardPage() {
     streak: 0,
   });
   const [recentActivities, setRecentActivities] = useState<RecentActivity[]>(
-    []
+    [],
   );
   const [isLoading, setIsLoading] = useState(true);
 
@@ -243,7 +242,6 @@ export default function DashboardPage() {
         <Card className="hover-lift">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Target className="h-5 w-5 text-green-500" />
               クイックアクション
             </CardTitle>
           </CardHeader>
